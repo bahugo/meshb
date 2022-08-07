@@ -1,0 +1,13 @@
+[package]
+name = "patro_mesh"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+derive-new = "0.5.9"
+derive_more = "0.99.17"
+ndarray = "0.15.6"
+num-traits = "0.2.15"
+regex = "1.6.0"
