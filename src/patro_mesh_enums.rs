@@ -1,4 +1,5 @@
 use derive_more::{Display, From};
+
 #[derive(Debug, PartialEq, Clone, Display)]
 pub enum PatroMeshFormat {
     Mail,
