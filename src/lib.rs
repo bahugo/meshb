@@ -31,7 +31,7 @@ mod tests {
 
     #[test]
     fn read_mail_file_should_work() {
-
+        todo!();
         let mail_text: &str = "
     --------------------------------------------------------------------------------
      TITRE
