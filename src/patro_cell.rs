@@ -1,5 +1,5 @@
-use std::borrow::Cow;
-use std::cell::Cell;
+use std::borrow::{Borrow, Cow};
+use std::cell::RefCell;
 use std::rc::Rc;
 use ndarray::Array1;
 use patro_node::PatroNode;
@@ -8,13 +8,13 @@ use crate::patro_node;
 
 pub trait PatroCell {
     fn get_name(&self) -> &str;
-    fn get_co(&self) -> Vec<Rc<Cell<PatroNode>>>;
-    fn new(connectivity: Array1<Rc<Cell<PatroNode>>>, name: String) -> Self where Self: Sized;
+    fn get_co(&self) -> Vec<Rc<RefCell<PatroNode>>>;
+    fn new(connectivity: Array1<Rc<RefCell<PatroNode>>>, name: String) -> Self where Self: Sized;
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Poi1Cell {
-    pub co: [Rc<Cell<PatroNode>>; 1],
+    pub co: [Rc<RefCell<PatroNode>>; 1],
     pub name: Cow<'static, str>,
 }
 
@@ -23,18 +23,18 @@ impl PatroCell for Poi1Cell {
         &self.name
     }
 
-    fn get_co(&self) -> Vec<Rc<Cell<PatroNode>>> {
+    fn get_co(&self) -> Vec<Rc<RefCell<PatroNode>>> {
         self.co.to_vec()
     }
 
-    fn new(connectivity: Array1<Rc<Cell<PatroNode>>>, name: String) -> Poi1Cell {
+    fn new(connectivity: Array1<Rc<RefCell<PatroNode>>>, name: String) -> Poi1Cell {
         Poi1Cell { co: [connectivity[0].clone()], name: Cow::Owned(name) }
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Seg2Cell {
-    pub co: [Rc<Cell<PatroNode>>; 2],
+    pub co: [Rc<RefCell<PatroNode>>; 2],
     pub name: Cow<'static, str>,
 }
 
@@ -43,10 +43,10 @@ impl PatroCell for Seg2Cell {
         &self.name
     }
 
-    fn get_co(&self) -> Vec<Rc<Cell<PatroNode>>> {
+    fn get_co(&self) -> Vec<Rc<RefCell<PatroNode>>> {
         self.co.to_vec()
     }
-    fn new(connectivity: Array1<Rc<Cell<PatroNode>>>, name: String) -> Seg2Cell {
+    fn new(connectivity: Array1<Rc<RefCell<PatroNode>>>, name: String) -> Seg2Cell {
         Seg2Cell { co: [connectivity[0].clone(), connectivity[1].clone()], name: Cow::Owned(name) }
     }
 }
