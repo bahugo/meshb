@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use derive_more::{Display, From};
 use ndarray::prelude::*;
 use std::collections::HashMap;
@@ -24,14 +25,15 @@ use crate::patro_node::PatroNode;
 // self.ty = ty if ty is not None else []      # list of cells' type
 // self.ty = np.array(self.ty, dtype=np.uint8)
 
+
 // #[derive(Debug, PartialEq, Clone)]
 pub struct PatroMesh {
     // noeuds
-    pub nodes: Vec<Rc<PatroNode>>,
+    pub nodes: Vec<Rc<Cell<PatroNode>>>,
     // mailles
     pub cells: Vec<Rc<dyn PatroCell>>,
     // gno [Group]: groupes de noeuds (dictionnaire de arrays de numéros de noeuds)
-    pub gno: HashMap<String, Vec<Rc<PatroNode>>>,
+    pub gno: HashMap<String, Vec<Rc<Cell<PatroNode>>>>,
     // gma [Group]: groupes de mailles (dictionnaire de arrays de numéros de mailles)
     pub gma: HashMap<String, Vec<Rc<dyn PatroCell>>>,
 }
@@ -46,26 +48,27 @@ impl PatroMesh {
         }
     }
 
-    pub fn add_nodes(&mut self, nodes: &Array2<f64>, nodes_names: &[&str]) {
+    pub fn add_nodes(&mut self, nodes: &Array2<f64>, nodes_names: &[&'static str]) {
         for inode in 0..nodes.shape()[0]
         {
-            let node_tmp = PatroNode {
+            let node_tmp = Cell::new(PatroNode {
                 x: nodes[[inode, 0]],
                 y: nodes[[inode, 1]],
                 z: nodes[[inode, 2]],
-                name: nodes_names[inode].to_string(),
-            };
+                name: nodes_names[inode],
+            });
             self.nodes.push(Rc::new(node_tmp));
         };
     }
 
-    pub fn add_cells(&mut self, connectivities: &[Array1<usize>], ty: PatroCellType) -> Result<Vec<usize>, &str> {
+    pub fn add_cells(&mut self, connectivities: &[Array1<usize>], ty: PatroCellType)
+        -> Result<Vec<usize>, &str> {
         match ty {
             PatroCellType::POI1 => {
-                self.add_poi1_cells(connectivities)
+                self.add_cells_of_type::<Poi1Cell>(connectivities)
             }
             PatroCellType::SEG2 => {
-                self.add_seg2_cells(connectivities)
+                self.add_cells_of_type::<Seg2Cell>(connectivities)
             }
             PatroCellType::TRIA3 => {
                 unimplemented!()
@@ -87,29 +90,25 @@ impl PatroMesh {
     pub fn get_cell_name(cell_id: usize) -> String {
         format!("M{}", &(cell_id + 1))
     }
-    pub fn add_poi1_cells(&mut self, connectivities: &[Array1<usize>]) -> Result<Vec<usize>, &str> {
-        let mut cells = vec![];
-        for nodes in connectivities.iter() {
-            let cell_id = self.cells.len().to_usize().unwrap();
-            let cell = Poi1Cell {
-                co: [self.nodes[nodes[0]].clone(), ],
-                name: Self::get_cell_name(cell_id).to_string(),
-            };
-            self.cells.push(Rc::new(cell));
-            cells.push(cell_id);
-        }
-        Ok(cells)
+    pub fn create_one_cell<T>(&mut self, connectivity: &Array1<usize>) -> Result<T, &str>
+        where T : PatroCell
+    {
+        let cell_id = self.cells.len().to_usize().unwrap();
+        let cell = T::new(
+                 connectivity.map(|inode| self.nodes[*inode].clone()),
+                 Self::get_cell_name(cell_id),
+        );
+        Ok(cell)
     }
-    pub fn add_seg2_cells(&mut self, connectivities: &[Array1<usize>]) -> Result<Vec<usize>, &str> {
+
+    pub fn add_cells_of_type<T>(&mut self, connectivities: &[Array1<usize>]) -> Result<Vec<usize>, &str>
+        where T : PatroCell + 'static
+    {
         let mut cells = vec![];
         for nodes in connectivities.iter() {
-            let cell_id = self.cells.len().to_usize().unwrap();
-            let cell = Seg2Cell {
-                co: [self.nodes[nodes[0]].clone(), self.nodes[nodes[1]].clone()],
-                name: Self::get_cell_name(cell_id).to_string(),
-            };
-            self.cells.push(Rc::new(cell));
-            cells.push(cell_id);
+            let cell = self.create_one_cell::<T>(nodes).unwrap();
+            self.cells.push(Rc::new( cell));
+            cells.push(self.cells.len() - 1);
         }
         Ok(cells)
     }
@@ -134,7 +133,7 @@ impl PatroMesh {
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Borrow;
+    use std::borrow::{Borrow, BorrowMut};
     use ndarray::array;
     use crate::patro_mesh::PatroMesh;
     use crate::patro_mesh_enums::PatroCellType;
@@ -156,16 +155,16 @@ mod tests {
         let nodes = array![[3., 0., 1.], [2., 1., 1.]];
         mesh.add_nodes(&nodes, &nodes_names);
         assert_eq!(mesh.nodes.len(), 2);
-        assert_eq!(*mesh.nodes[0], PatroNode { x: 3.0, y: 0.0, z: 1.0, name: "N12".to_string() });
-        assert_eq!(*mesh.nodes[1], PatroNode { x: 2.0, y: 1.0, z: 1.0, name: "N2".to_string() });
+        assert_eq!(mesh.nodes[0].get(), PatroNode { x: 3.0, y: 0.0, z: 1.0, name: "N12" });
+        assert_eq!(mesh.nodes[1].get(), PatroNode { x: 2.0, y: 1.0, z: 1.0, name: "N2" });
         assert_eq!(mesh.gno.len(), 0);
         assert_eq!(mesh.gma.len(), 0);
         let nodes_names = ["N21", "N222"];
         let nodes = array![[3.2, 0.3, 1.3], [2.1, 1.1, 1.1]];
         mesh.add_nodes(&nodes, &nodes_names);
         assert_eq!(mesh.nodes.len(), 4);
-        assert_eq!(*mesh.nodes[2], PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N21".to_string() });
-        assert_eq!(*mesh.nodes[3], PatroNode { x: 2.1, y: 1.1, z: 1.1, name: "N222".to_string() });
+        assert_eq!(mesh.nodes[2].get(), PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N21" });
+        assert_eq!(mesh.nodes[3].get(), PatroNode { x: 2.1, y: 1.1, z: 1.1, name: "N222" });
     }
 
     fn get_mesh_with_six_nodes() -> PatroMesh {
@@ -189,10 +188,10 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         let cell_co_1 = mesh.cells[0].get_co();
         assert_eq!(cell_co_1.len(), 1);
-        assert_eq!(*cell_co_1[0], PatroNode { x: 3., y: 0., z: 1., name: "N1".to_string() });
+        assert_eq!(cell_co_1[0].get(), PatroNode { x: 3., y: 0., z: 1., name: "N1" });
         let cell_co_2 = mesh.cells[1].get_co();
         assert_eq!(cell_co_2.len(), 1);
-        assert_eq!(*cell_co_2[0], PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N3".to_string() });
+        assert_eq!(cell_co_2[0].get(), PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N3" });
     }
 
     #[test]
@@ -200,16 +199,37 @@ mod tests {
     {
         let mut mesh = get_mesh_with_six_nodes();
         assert_eq!(mesh.cells.len(), 0);
-        let new_cells = mesh.add_cells(
-            &[array![0, 1], array![2, 3]],
-            PatroCellType::SEG2);
+        let new_cells = add_two_seg2_cells(&mut mesh);
         assert_eq!(new_cells.unwrap(), vec![0, 1]);
         assert_eq!(mesh.cells.len(), 2);
         let cell_co_1 = mesh.cells[0].get_co();
-        assert_eq!(*cell_co_1[0], PatroNode { x: 3., y: 0., z: 1., name: "N1".to_string() });
-        assert_eq!(*cell_co_1[1], PatroNode { x: 2., y: 1., z: 1., name: "N2".to_string() });
+        assert_eq!(cell_co_1[0].get(), PatroNode { x: 3., y: 0., z: 1., name: "N1" });
+        assert_eq!(cell_co_1[1].get(), PatroNode { x: 2., y: 1., z: 1., name: "N2" });
         let cell_co_2 = mesh.cells[1].get_co();
-        assert_eq!(*cell_co_2[0], PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N3".to_string() });
-        assert_eq!(*cell_co_2[1], PatroNode { x: 2.1, y: 1.1, z: 1.1, name: "N4".to_string() });
+        assert_eq!(cell_co_2[0].get(), PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N3" });
+        assert_eq!(cell_co_2[1].get(), PatroNode { x: 2.1, y: 1.1, z: 1.1, name: "N4" });
+    }
+
+    fn add_two_seg2_cells(mesh: &mut PatroMesh) -> Result<Vec<usize>, &str> {
+        let new_cells = mesh.add_cells(
+            &[array![0, 1], array![2, 3]],
+            PatroCellType::SEG2);
+        new_cells
+    }
+
+    #[test]
+    fn should_be_able_to_change_a_node_already_used(){
+       let mut mesh = get_mesh_with_six_nodes();
+
+        let new_cells = add_two_seg2_cells(&mut mesh);
+        let mut first_node = mesh.nodes.first().unwrap().get();
+        first_node.x = 10.2_f64;
+        first_node.y = 0.2_f64;
+
+        mesh.nodes.first().unwrap().replace(first_node);
+
+        assert_eq!(mesh.cells.first().unwrap().get_co()[0].get().x, 10.2_f64);
+        assert_eq!(mesh.cells.first().unwrap().get_co()[0].get().y, 0.2_f64);
+
     }
 }

@@ -1,17 +1,21 @@
+use std::borrow::Cow;
+use std::cell::Cell;
 use std::rc::Rc;
+use ndarray::Array1;
 use patro_node::PatroNode;
 use crate::patro_node;
 
 
 pub trait PatroCell {
     fn get_name(&self) -> &str;
-    fn get_co(&self) -> Vec<Rc<PatroNode>>;
+    fn get_co(&self) -> Vec<Rc<Cell<PatroNode>>>;
+    fn new(connectivity: Array1<Rc<Cell<PatroNode>>>, name: String) -> Self where Self: Sized;
 }
 
-#[derive(Debug, Clone)]
-pub struct Poi1Cell{
-    pub co: [Rc<PatroNode>; 1],
-    pub name: String
+#[derive(Clone)]
+pub struct Poi1Cell {
+    pub co: [Rc<Cell<PatroNode>>; 1],
+    pub name: Cow<'static, str>,
 }
 
 impl PatroCell for Poi1Cell {
@@ -19,15 +23,19 @@ impl PatroCell for Poi1Cell {
         &self.name
     }
 
-    fn get_co(&self) -> Vec<Rc<PatroNode>> {
+    fn get_co(&self) -> Vec<Rc<Cell<PatroNode>>> {
         self.co.to_vec()
+    }
+
+    fn new(connectivity: Array1<Rc<Cell<PatroNode>>>, name: String) -> Poi1Cell {
+        Poi1Cell { co: [connectivity[0].clone()], name: Cow::Owned(name) }
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Seg2Cell{
-    pub co: [Rc<PatroNode>; 2],
-    pub name: String
+#[derive(Clone)]
+pub struct Seg2Cell {
+    pub co: [Rc<Cell<PatroNode>>; 2],
+    pub name: Cow<'static, str>,
 }
 
 impl PatroCell for Seg2Cell {
@@ -35,37 +43,40 @@ impl PatroCell for Seg2Cell {
         &self.name
     }
 
-    fn get_co(&self) -> Vec<Rc<PatroNode>> {
+    fn get_co(&self) -> Vec<Rc<Cell<PatroNode>>> {
         self.co.to_vec()
+    }
+    fn new(connectivity: Array1<Rc<Cell<PatroNode>>>, name: String) -> Seg2Cell {
+        Seg2Cell { co: [connectivity[0].clone(), connectivity[1].clone()], name: Cow::Owned(name) }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Tria3Cell{
+pub struct Tria3Cell {
     pub co: [Rc<PatroNode>; 3],
-    pub name: String
+    pub name: Cow<'static, str>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Quad4Cell{
+pub struct Quad4Cell {
     pub co: [Rc<PatroNode>; 4],
-    pub name: String
+    pub name: Cow<'static, str>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Penta6Cell{
+pub struct Penta6Cell {
     pub co: [Rc<PatroNode>; 6],
-    pub name: String
+    pub name: Cow<'static, str>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Pyram5Cell{
+pub struct Pyram5Cell {
     pub co: [Rc<PatroNode>; 5],
-    pub name: String
+    pub name: Cow<'static, str>,
 }
 
 #[derive(Debug, Clone)]
-pub struct Hexa8Cell{
+pub struct Hexa8Cell {
     pub co: [Rc<PatroNode>; 8],
-    pub name: String
+    pub name: Cow<'static, str>,
 }
