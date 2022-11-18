@@ -26,6 +26,9 @@ use crate::patro_node::PatroNode;
 // self.ty = ty if ty is not None else []      # list of cells' type
 // self.ty = np.array(self.ty, dtype=np.uint8)
 
+// FIXME repasser à la version avec des Cell au lieu de refCell + faire une hashmap pour stocker
+//  un id fixe pour chaque maille et chaque noeud et utiliser cet id partout pour référencer
+//  les élts (par exemple dans les groupes, dans les connectivités, etc...)
 
 // #[derive(Debug, PartialEq, Clone)]
 pub struct PatroMesh {
