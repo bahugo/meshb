@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
 use num_traits::ToPrimitive;
+use std::cell::Cell;
 
 use crate::patro_mesh_enums::{PatroMeshFormat, PatroCellType};
 use crate::patro_cell::{PatroCell, Poi1Cell, Seg2Cell};
@@ -32,12 +33,14 @@ use crate::patro_node::PatroNode;
 
 // #[derive(Debug, PartialEq, Clone)]
 pub struct PatroMesh {
+    pub next_node_id: usize,
+    pub next_cell_id: usize,
     // noeuds
-    pub nodes: Vec<Rc<RefCell<PatroNode>>>,
+    pub nodes: HashMap<usize,Rc<Cell<PatroNode>>>,
     // mailles
     pub cells: Vec<Rc<dyn PatroCell>>,
     // gno [Group]: groupes de noeuds (dictionnaire de arrays de numéros de noeuds)
-    pub gno: HashMap<String, Vec<Rc<RefCell<PatroNode>>>>,
+    pub gno: HashMap<String, Vec<usize>>,
     // gma [Group]: groupes de mailles (dictionnaire de arrays de numéros de mailles)
     pub gma: HashMap<String, Vec<Rc<dyn PatroCell>>>,
 }
@@ -45,7 +48,9 @@ pub struct PatroMesh {
 impl PatroMesh {
     pub fn new() -> Self {
         PatroMesh {
-            nodes: vec![],
+            next_node_id: 0,
+            next_cell_id: 0,
+            nodes: HashMap::new(),
             cells: vec![],
             gno: HashMap::new(),
             gma: HashMap::new(),
@@ -54,13 +59,15 @@ impl PatroMesh {
     pub fn add_nodes(&mut self, nodes: &Array2<f64>, nodes_names: &[&'static str]) {
         for inode in 0..nodes.shape()[0]
         {
-            let node_tmp = RefCell::new(PatroNode {
+            let node_tmp = Cell::new(PatroNode {
                 x: nodes[[inode, 0]],
                 y: nodes[[inode, 1]],
                 z: nodes[[inode, 2]],
                 name: nodes_names[inode],
             });
-            self.nodes.push(Rc::new(node_tmp));
+            self.nodes.insert(self.next_node_id, Rc::new(node_tmp));
+            // incrément du prochain node_id
+            self.next_node_id+=1;
         };
     }
 
@@ -97,9 +104,7 @@ impl PatroMesh {
         where T : PatroCell
     {
         let cell_id = self.cells.len().to_usize().unwrap();
-        let cell = T::new(
-                 connectivity.map(|inode| self.nodes[*inode].clone()),
-                 Self::get_cell_name(cell_id),
+        let cell = T::new( connectivity, Self::get_cell_name(cell_id),
         );
         Ok(cell)
     }
@@ -112,6 +117,7 @@ impl PatroMesh {
             let cell = self.create_one_cell::<T>(nodes).unwrap();
             self.cells.push(Rc::new( cell));
             cells.push(self.cells.len() - 1);
+            self.next_cell_id+=1;
         }
         Ok(cells)
     }
@@ -137,7 +143,7 @@ impl PatroMesh {
 #[cfg(test)]
 mod tests {
     use std::borrow::{Borrow, BorrowMut};
-    use std::cell::{RefCell, RefMut};
+    use std::cell::{Cell, RefCell, RefMut};
     use ndarray::array;
     use crate::patro_mesh::PatroMesh;
     use crate::patro_mesh_enums::PatroCellType;
@@ -159,17 +165,17 @@ mod tests {
         let nodes = array![[3., 0., 1.], [2., 1., 1.]];
         mesh.add_nodes(&nodes, &nodes_names);
         assert_eq!(mesh.nodes.len(), 2);
-        let node = mesh.nodes[0].borrow() as &RefCell<PatroNode>;
-        assert_eq!(*(mesh.nodes[0].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 3.0, y: 0.0, z: 1.0, name: "N12" });
-        assert_eq!(*(mesh.nodes[1].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 2.0, y: 1.0, z: 1.0, name: "N2" });
+        let node = mesh.nodes[&0].borrow() as &Cell<PatroNode>;
+        assert_eq!((mesh.nodes[&0].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 3.0, y: 0.0, z: 1.0, name: "N12" });
+        assert_eq!((mesh.nodes[&1].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 2.0, y: 1.0, z: 1.0, name: "N2" });
         assert_eq!(mesh.gno.len(), 0);
         assert_eq!(mesh.gma.len(), 0);
         let nodes_names = ["N21", "N222"];
         let nodes = array![[3.2, 0.3, 1.3], [2.1, 1.1, 1.1]];
         mesh.add_nodes(&nodes, &nodes_names);
         assert_eq!(mesh.nodes.len(), 4);
-        assert_eq!(*(mesh.nodes[2].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N21" });
-        assert_eq!(*(mesh.nodes[3].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 2.1, y: 1.1, z: 1.1, name: "N222" });
+        assert_eq!((mesh.nodes[&2].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N21" });
+        assert_eq!((mesh.nodes[&3].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 2.1, y: 1.1, z: 1.1, name: "N222" });
     }
 
     fn get_mesh_with_six_nodes() -> PatroMesh {
@@ -193,10 +199,11 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         let cell_co_1 = mesh.cells[0].get_co();
         assert_eq!(cell_co_1.len(), 1);
-        assert_eq!(*(cell_co_1[0].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 3., y: 0., z: 1., name: "N1" });
+        // FIXME faire une fonction pratique pour récupérer les noeuds à partir des connectivités
+        assert_eq!((cell_co_1[0].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 3., y: 0., z: 1., name: "N1" });
         let cell_co_2 = mesh.cells[1].get_co();
         assert_eq!(cell_co_2.len(), 1);
-        assert_eq!(*(cell_co_2[0].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N3" });
+        assert_eq!((cell_co_2[0].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N3" });
     }
 
     #[test]
@@ -208,11 +215,11 @@ mod tests {
         assert_eq!(new_cells.unwrap(), vec![0, 1]);
         assert_eq!(mesh.cells.len(), 2);
         let cell_co_1 = mesh.cells[0].get_co();
-        assert_eq!(*(cell_co_1[0].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 3., y: 0., z: 1., name: "N1" });
-        assert_eq!(*(cell_co_1[1].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 2., y: 1., z: 1., name: "N2" });
+        assert_eq!((cell_co_1[&0].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 3., y: 0., z: 1., name: "N1" });
+        assert_eq!((cell_co_1[&1].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 2., y: 1., z: 1., name: "N2" });
         let cell_co_2 = mesh.cells[1].get_co();
-        assert_eq!(*(cell_co_2[0].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N3" });
-        assert_eq!(*(cell_co_2[1].borrow() as &RefCell<PatroNode>).borrow(), PatroNode { x: 2.1, y: 1.1, z: 1.1, name: "N4" });
+        assert_eq!((cell_co_2[&0].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 3.2, y: 0.3, z: 1.3, name: "N3" });
+        assert_eq!((cell_co_2[&1].borrow() as &Cell<PatroNode>).borrow().get(), PatroNode { x: 2.1, y: 1.1, z: 1.1, name: "N4" });
     }
 
     fn add_two_seg2_cells(mesh: &mut PatroMesh) -> Result<Vec<usize>, &str> {
@@ -239,7 +246,7 @@ mod tests {
         }
     }
 
-    fn get_node_mut_ref(mesh: &mut PatroMesh, index : usize) -> RefMut<PatroNode> {
-        (mesh.nodes[index].borrow() as &RefCell<PatroNode>).borrow_mut()
+    fn get_node_mut_ref(mesh: &mut PatroMesh, index : usize) -> PatroNode {
+        (mesh.nodes[index].borrow().get() as PatroNode)
     }
 }
