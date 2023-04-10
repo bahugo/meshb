@@ -264,6 +264,7 @@ mod tests {
 
             assert_eq!(first_node.x, 10.2_f64);
             assert_eq!(first_node.y, 0.2_f64);
+            assert_eq!(first_node.z, 1.0_f64);
         }
     }
 
