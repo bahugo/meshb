@@ -68,16 +68,16 @@ impl PatroMesh {
             self.next_node_id+=1;
         };
     }
-    pub fn edit_node(&mut self, index: usize, x: Option<f64>, y: Option<f64>, z: Option<f64>) -> bool{
+    pub fn edit_node(&mut self, index: &usize, x: Option<f64>, y: Option<f64>, z: Option<f64>) -> bool{
 
-        match self.nodes.get(&index) {
+        match self.nodes.get(index) {
             Some(node) => {
                 let mut node_tmp = node.clone().get();
 
                 if let Some(val) = x { node_tmp.x = val;}
                 if let Some(val) = y { node_tmp.y = val;}
                 if let Some(val) = z { node_tmp.z = val;}
-                self.nodes[&index].set(node_tmp);
+                self.nodes[index].set(node_tmp);
                 return true;
             },
             None => return false,
@@ -257,7 +257,7 @@ mod tests {
         {
             let _new_cells = add_two_seg2_cells(&mut mesh);
             {
-                let result = mesh.edit_node(0, Some(10.2_f64), Some(0.2_f64), None);
+                let result = mesh.edit_node(&0, Some(10.2_f64), Some(0.2_f64), None);
                 assert_eq!(result, true);
             }
             let first_node = mesh.nodes[&0].clone().get();
