@@ -1,5 +1,3 @@
-use std::borrow::BorrowMut;
-use std::cell::{Ref, RefCell, RefMut};
 use derive_more::{Display, From};
 use ndarray::prelude::*;
 use std::collections::HashMap;
@@ -69,6 +67,21 @@ impl PatroMesh {
             // incrément du prochain node_id
             self.next_node_id+=1;
         };
+    }
+    pub fn edit_node(&mut self, index: usize, x: Option<f64>, y: Option<f64>, z: Option<f64>) -> bool{
+
+        match self.nodes.get(&index) {
+            Some(node) => {
+                let mut node_tmp = node.clone().get();
+
+                if let Some(val) = x { node_tmp.x = val;}
+                if let Some(val) = y { node_tmp.y = val;}
+                if let Some(val) = z { node_tmp.z = val;}
+                self.nodes[&index].set(node_tmp);
+                return true;
+            },
+            None => return false,
+        }
     }
 
     pub fn add_cells(&mut self, connectivities: &[Array1<usize>], ty: PatroCellType)
@@ -154,7 +167,6 @@ impl PatroMesh {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
     use ndarray::array;
     use crate::patro_mesh::PatroMesh;
     use crate::patro_mesh_enums::PatroCellType;
@@ -210,7 +222,6 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
         let cell_co_1 = mesh.get_cell_co(0).unwrap();
         assert_eq!(cell_co_1.len(), 1);
-        // FIXME faire une fonction pratique pour récupérer les noeuds à partir des connectivités
         assert_eq!((cell_co_1[0].clone().get()), PatroNode { x: 3., y: 0., z: 1., name: "N1" });
         let cell_co_2 = mesh.get_cell_co(1).unwrap();
         assert_eq!(cell_co_2.len(), 1);
@@ -246,18 +257,14 @@ mod tests {
         {
             let _new_cells = add_two_seg2_cells(&mut mesh);
             {
-                let mut first_node = get_node_mut_ref(&mut mesh, 0);
-                first_node.x = 10.2_f64;
-                first_node.y = 0.2_f64;
+                let result = mesh.edit_node(0, Some(10.2_f64), Some(0.2_f64), None);
+                assert_eq!(result, true);
             }
-            let first_node = get_node_mut_ref(&mut mesh, 0);
+            let first_node = mesh.nodes[&0].clone().get();
 
             assert_eq!(first_node.x, 10.2_f64);
             assert_eq!(first_node.y, 0.2_f64);
         }
     }
 
-    fn get_node_mut_ref(mesh: &mut PatroMesh, index : usize) -> PatroNode {
-        mesh.nodes[&index].get() as PatroNode
-    }
 }
