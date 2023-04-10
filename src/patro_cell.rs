@@ -1,6 +1,4 @@
-use std::borrow::{Borrow, Cow};
-use std::cell::RefCell;
-use std::cell::Cell;
+use std::borrow::Cow;
 use std::rc::Rc;
 use ndarray::Array1;
 use patro_node::PatroNode;
@@ -29,7 +27,7 @@ impl PatroCell for Poi1Cell {
     }
 
     fn new(connectivity: &Array1<usize>, name: String) -> Poi1Cell {
-        Poi1Cell { co: [*connectivity[0].clone()], name: Cow::Owned(name) }
+        Poi1Cell { co: [connectivity[0].clone()], name: Cow::Owned(name) }
     }
 }
 
@@ -48,7 +46,7 @@ impl PatroCell for Seg2Cell {
         self.co.to_vec()
     }
     fn new(connectivity: &Array1<usize>, name: String) -> Seg2Cell {
-        Seg2Cell { co: [*connectivity[0].clone(), *connectivity[1].clone()], name: Cow::Owned(name) }
+        Seg2Cell { co: [connectivity[0].clone(), connectivity[1].clone()], name: Cow::Owned(name) }
     }
 }
 
