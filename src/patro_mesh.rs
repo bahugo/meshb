@@ -1,6 +1,7 @@
 use derive_more::{Display, From};
 use ndarray::prelude::*;
 use num_traits::ToPrimitive;
+use core::fmt;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::fs;
@@ -28,6 +29,21 @@ use crate::patro_node::PatroNode;
 // FIXME repasser à la version avec des Cell au lieu de refCell + faire une hashmap pour stocker
 //  un id fixe pour chaque maille et chaque noeud et utiliser cet id partout pour référencer
 //  les élts (par exemple dans les groupes, dans les connectivités, etc...)
+
+struct MeshError{
+    message: String
+}
+
+impl fmt::Display for MeshError{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "MeshError {}", self.message.clone())
+    }
+}
+impl fmt::Debug for MeshError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "MeshError {}", self.message.clone())
+    }
+}
 
 // #[derive(Debug, PartialEq, Clone)]
 pub struct PatroMesh {
@@ -76,23 +92,23 @@ impl PatroMesh {
         y: Option<f64>,
         z: Option<f64>,
     ) -> bool {
-        match self.nodes.get(index) {
-            Some(node) => {
-                let mut node_tmp = node.clone().get();
+        if let Some(node) = self.nodes.get(index) {
+            let mut node_tmp = node.clone().get();
 
-                if let Some(val) = x {
-                    node_tmp.x = val;
-                }
-                if let Some(val) = y {
-                    node_tmp.y = val;
-                }
-                if let Some(val) = z {
-                    node_tmp.z = val;
-                }
-                self.nodes[index].set(node_tmp);
-                return true;
+            if let Some(val) = x {
+                node_tmp.x = val;
             }
-            None => return false,
+            if let Some(val) = y {
+                node_tmp.y = val;
+            }
+            if let Some(val) = z {
+                node_tmp.z = val;
+            }
+            self.nodes[index].set(node_tmp);
+            return true;
+        }
+        else{
+            return false;
         }
     }
 
@@ -125,17 +141,18 @@ impl PatroMesh {
         format!("M{}", &(cell_id + 1))
     }
 
-    pub fn get_cell_co(&mut self, cell_id: &usize) -> Result<Vec<Rc<Cell<PatroNode>>>, &'static str> {
-        let cell_opt = self.cells.get(cell_id);
+    pub fn get_cell_co(&self, cell_id: usize) -> Result<Vec<Rc<Cell<PatroNode>>>, MeshError> {
+        let cell_opt = self.cells.get(&cell_id);
 
         if Option::is_none(&cell_opt) {
-            return Err("cell_id not found in cells");
+            let mess = format!("cell_id {} not found in cells", cell_id);
+            return Err(MeshError{message: mess} );
         }
 
-        let node_ids = cell_opt.unwrap().clone().get_co();
+        let node_ids = self.cells.get(&cell_id).unwrap().get_co();
         let out = node_ids
             .iter()
-            .map(|node_id| self.nodes[&node_id].clone())
+            .map(|node_id| self.nodes[node_id].clone())
             .collect();
 
         Ok(out)
@@ -186,7 +203,8 @@ impl PatroMesh {
 
 #[cfg(test)]
 mod tests {
-    use crate::patro_mesh::PatroMesh;
+
+    use crate::patro_mesh::{PatroMesh, MeshError};
     use crate::patro_mesh_enums::PatroCellType;
     use crate::patro_node::PatroNode;
     use ndarray::array;
@@ -207,7 +225,7 @@ mod tests {
         let nodes = array![[3., 0., 1.], [2., 1., 1.]];
         mesh.add_nodes(&nodes, &nodes_names);
         assert_eq!(mesh.nodes.len(), 2);
-        let node = mesh.nodes[&0].get();
+        let _node = mesh.nodes[&0].get();
         assert_eq!(
             (mesh.nodes[&0].get()),
             PatroNode {
@@ -275,7 +293,11 @@ mod tests {
         let new_cells = mesh.add_cells(&[array![0], array![2]], PatroCellType::POI1);
         assert_eq!(new_cells.unwrap(), vec![0, 1]);
         assert_eq!(mesh.cells.len(), 2);
-        let cell_co_1 = mesh.get_cell_co(&0).unwrap();
+
+        let cell_co_not_found = mesh.get_cell_co(1112);
+        assert!(matches!(cell_co_not_found, Err(MeshError)));
+
+        let cell_co_1 = mesh.get_cell_co(0).unwrap();
         assert_eq!(cell_co_1.len(), 1);
         assert_eq!(
             (cell_co_1[0].clone().get()),
@@ -286,7 +308,7 @@ mod tests {
                 name: "N1"
             }
         );
-        let cell_co_2 = mesh.get_cell_co(&1).unwrap();
+        let cell_co_2 = mesh.get_cell_co(1).unwrap();
         assert_eq!(cell_co_2.len(), 1);
         assert_eq!(
             (cell_co_2[0].clone().get()),
@@ -306,7 +328,7 @@ mod tests {
         let new_cells = add_two_seg2_cells(&mut mesh);
         assert_eq!(new_cells.unwrap(), vec![0, 1]);
         assert_eq!(mesh.cells.len(), 2);
-        let cell_co_1 = mesh.get_cell_co(&0).unwrap();
+        let cell_co_1 = mesh.get_cell_co(0).unwrap();
         assert_eq!(
             (cell_co_1[0].clone().get()),
             PatroNode {
@@ -325,7 +347,8 @@ mod tests {
                 name: "N2"
             }
         );
-        let cell_co_2 = mesh.get_cell_co(&1).unwrap();
+        let cell_co_2 = mesh.get_cell_co(1).unwrap();
+        let _cell_co_3 = mesh.get_cell_co(1).unwrap();
         assert_eq!(
             (cell_co_2[0].clone().get()),
             PatroNode {
