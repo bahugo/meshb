@@ -30,7 +30,7 @@ use crate::patro_node::PatroNode;
 //  un id fixe pour chaque maille et chaque noeud et utiliser cet id partout pour référencer
 //  les élts (par exemple dans les groupes, dans les connectivités, etc...)
 
-struct MeshError{
+pub struct MeshError{
     message: String
 }
 
@@ -105,10 +105,10 @@ impl PatroMesh {
                 node_tmp.z = val;
             }
             self.nodes[index].set(node_tmp);
-            return true;
+            true
         }
         else{
-            return false;
+            false
         }
     }
 
@@ -177,7 +177,7 @@ impl PatroMesh {
         for nodes in connectivities.iter() {
             let cell = match Self::create_one_cell::<T>(nodes){
                 Ok(p) => p,
-                Err(e) => return Err(&e),
+                Err(e) => return Err(e),
             };
             self.cells.insert(self.next_cell_id, Rc::new(cell));
             cells.push(self.next_cell_id);

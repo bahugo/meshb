@@ -21,7 +21,7 @@ impl PatroCell for Poi1Cell {
     }
 
     fn new(connectivity: &Array1<usize>) -> Poi1Cell {
-        Poi1Cell { co: [connectivity[0].clone()]}
+        Poi1Cell { co: [connectivity[0]]}
     }
 }
 
@@ -36,7 +36,7 @@ impl PatroCell for Seg2Cell {
         self.co.to_vec()
     }
     fn new(connectivity: &Array1<usize>) -> Seg2Cell {
-        Seg2Cell { co: [connectivity[0].clone(), connectivity[1].clone()]}
+        Seg2Cell { co: [connectivity[0], connectivity[1]]}
     }
 }
 
