@@ -158,7 +158,7 @@ impl PatroMesh {
         Ok(out)
     }
 
-    pub fn create_one_cell<T>(&mut self, connectivity: &Array1<usize>) -> Result<T, &str>
+    pub fn create_one_cell<T>(connectivity: &Array1<usize>) -> Result<T, &'static str>
     where
         T: PatroCell,
     {
@@ -169,13 +169,16 @@ impl PatroMesh {
     pub fn add_cells_of_type<T>(
         &mut self,
         connectivities: &[Array1<usize>],
-    ) -> Result<Vec<usize>, &str>
+    ) -> Result<Vec<usize>, &'static str>
     where
         T: PatroCell + 'static,
     {
         let mut cells = vec![];
         for nodes in connectivities.iter() {
-            let cell = self.create_one_cell::<T>(nodes).unwrap();
+            let cell = match Self::create_one_cell::<T>(nodes){
+                Ok(p) => p,
+                Err(e) => return Err(&e),
+            };
             self.cells.insert(self.next_cell_id, Rc::new(cell));
             cells.push(self.next_cell_id);
             self.next_cell_id += 1;
@@ -295,7 +298,7 @@ mod tests {
         assert_eq!(mesh.cells.len(), 2);
 
         let cell_co_not_found = mesh.get_cell_co(1112);
-        assert!(matches!(cell_co_not_found, Err(MeshError)));
+        assert!(matches!(cell_co_not_found, Err(_mesh_error)));
 
         let cell_co_1 = mesh.get_cell_co(0).unwrap();
         assert_eq!(cell_co_1.len(), 1);
