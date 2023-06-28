@@ -1,8 +1,8 @@
+use core::fmt;
 use derive_more::{Display, From};
 use ndarray::prelude::*;
 use num_traits::ToPrimitive;
-use core::fmt;
-use std::cell::{Cell, self};
+use std::cell::{self, Cell};
 use std::collections::HashMap;
 use std::fs;
 
@@ -29,11 +29,11 @@ use crate::patro_node::PatroNode;
 //  un id fixe pour chaque maille et chaque noeud et utiliser cet id partout pour référencer
 //  les élts (par exemple dans les groupes, dans les connectivités, etc...)
 
-pub struct MeshError{
-    message: String
+pub struct MeshError {
+    message: String,
 }
 
-impl fmt::Display for MeshError{
+impl fmt::Display for MeshError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "MeshError {}", self.message.clone())
     }
@@ -92,7 +92,7 @@ impl PatroMesh {
         z: Option<f64>,
     ) -> bool {
         if let Some(node) = self.nodes.get(index) {
-            let mut node_tmp = node.clone().get();
+            let mut node_tmp = node.get();
 
             if let Some(val) = x {
                 node_tmp.x = val;
@@ -105,8 +105,7 @@ impl PatroMesh {
             }
             self.nodes[index].set(node_tmp);
             true
-        }
-        else{
+        } else {
             false
         }
     }
@@ -136,17 +135,41 @@ impl PatroMesh {
             }
         }
     }
+
+    pub fn add_one_cell(
+        connectivity: &Array1<usize>,
+        ty: PatroCellType,
+    ) -> Result<Box<dyn PatroCell>, &'static str> {
+        match ty {
+            PatroCellType::POI1 => Ok(Box::new(Poi1Cell::new(connectivity))),
+            PatroCellType::SEG2 => Ok(Box::new(Seg2Cell::new(connectivity))),
+            PatroCellType::TRIA3 => {
+                unimplemented!()
+            }
+            PatroCellType::QUAD4 => {
+                unimplemented!()
+            }
+            PatroCellType::PENTA6 => {
+                unimplemented!()
+            }
+            PatroCellType::PYRAM5 => {
+                unimplemented!()
+            }
+            PatroCellType::HEXA8 => {
+                unimplemented!()
+            }
+        }
+    }
     pub fn get_cell_name(cell_id: usize) -> String {
         format!("M{}", &(cell_id + 1))
     }
 
     pub fn get_cell_co(&self, cell_id: usize) -> Result<Vec<&Cell<PatroNode>>, MeshError> {
-
-        let node_ids = match self.cells.get(&cell_id){
+        let node_ids = match self.cells.get(&cell_id) {
             Some(val) => val.get_co(),
             None => {
                 let mess = format!("cell_id {} not found in cells", cell_id);
-                return Err(MeshError{message: mess} );
+                return Err(MeshError { message: mess });
             }
         };
         let out = node_ids
@@ -174,7 +197,7 @@ impl PatroMesh {
     {
         let mut cells = vec![];
         for nodes in connectivities.iter() {
-            let cell = match Self::create_one_cell::<T>(nodes){
+            let cell = match Self::create_one_cell::<T>(nodes) {
                 Ok(p) => p,
                 Err(e) => return Err(e),
             };
@@ -183,6 +206,18 @@ impl PatroMesh {
             self.next_cell_id += 1;
         }
         Ok(cells)
+    }
+
+    pub fn edit_cell(&mut self, index: usize, connectivity: &Array1<usize>, ty: PatroCellType,) -> bool {
+        match Self::add_one_cell(connectivity, ty){
+            Ok(val) => {
+                if  self.cells.insert(index, val).is_none(){
+                    return false;
+                };
+                true
+            },
+            Err(_e) => false
+        }
     }
 
     pub fn read_mesh(filename: &str, format: PatroMeshFormat) -> PatroMesh {
@@ -206,7 +241,7 @@ impl PatroMesh {
 #[cfg(test)]
 mod tests {
 
-    use crate::patro_mesh::{PatroMesh, MeshError};
+    use crate::patro_mesh::{MeshError, PatroMesh};
     use crate::patro_mesh_enums::PatroCellType;
     use crate::patro_node::PatroNode;
     use ndarray::array;
@@ -381,15 +416,26 @@ mod tests {
         let mut mesh = get_mesh_with_six_nodes();
         {
             let _new_cells = add_two_seg2_cells(&mut mesh);
-            {
-                let result = mesh.edit_node(&0, Some(10.2_f64), Some(0.2_f64), None);
-                assert_eq!(result, true);
-            }
+            let result = mesh.edit_node(&0, Some(10.2_f64), Some(0.2_f64), None);
+            assert_eq!(result, true);
             let first_node = &mesh.nodes[&0].get();
 
             assert_eq!(first_node.x, 10.2_f64);
             assert_eq!(first_node.y, 0.2_f64);
             assert_eq!(first_node.z, 1.0_f64);
+        }
+    }
+
+    #[test]
+    fn should_be_able_to_edit_a_cell() {
+        let mut mesh = get_mesh_with_six_nodes();
+        {
+            let _new_cells = add_two_seg2_cells(&mut mesh);
+            let first_cell = &mesh.cells[&0];
+            assert_eq!(first_cell.get_co().len(), 2);
+            mesh.edit_cell(0, &array![0], PatroCellType::POI1);
+            let first_cell = &mesh.cells[&0];
+            assert_eq!(first_cell.get_co().len(), 1);
         }
     }
 }

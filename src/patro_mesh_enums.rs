@@ -1,11 +1,11 @@
 use derive_more::{Display, From};
 
-#[derive(Debug, PartialEq, Clone, Display)]
+#[derive(Display)]
 pub enum PatroMeshFormat {
     Mail,
 }
 
-#[derive(Debug, PartialEq, Clone, Display)]
+#[derive(Display)]
 pub enum PatroCellType {
     POI1,
     SEG2,
