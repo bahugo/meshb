@@ -2,10 +2,9 @@ use derive_more::{Display, From};
 use ndarray::prelude::*;
 use num_traits::ToPrimitive;
 use core::fmt;
-use std::cell::Cell;
+use std::cell::{Cell, self};
 use std::collections::HashMap;
 use std::fs;
-use std::rc::Rc;
 
 use crate::patro_cell::{PatroCell, Poi1Cell, Seg2Cell};
 use crate::patro_mesh_enums::{PatroCellType, PatroMeshFormat};
@@ -50,9 +49,9 @@ pub struct PatroMesh {
     pub next_node_id: usize,
     pub next_cell_id: usize,
     // noeuds
-    pub nodes: HashMap<usize, Rc<Cell<PatroNode>>>,
+    pub nodes: HashMap<usize, Cell<PatroNode>>,
     // mailles
-    pub cells: HashMap<usize, Rc<dyn PatroCell>>,
+    pub cells: HashMap<usize, Box<dyn PatroCell>>,
     // gno [Group]: groupes de noeuds (dictionnaire de arrays de numéros de noeuds)
     pub gno: HashMap<String, Vec<usize>>,
     // gma [Group]: groupes de mailles (dictionnaire de arrays de numéros de mailles)
@@ -79,7 +78,7 @@ impl PatroMesh {
                 z: nodes[[inode, 2]],
                 name: nodes_names[inode],
             });
-            self.nodes.insert(self.next_node_id, Rc::new(node_tmp));
+            self.nodes.insert(self.next_node_id, node_tmp);
             // incrément du prochain node_id
             self.next_node_id += 1;
         }
@@ -141,18 +140,18 @@ impl PatroMesh {
         format!("M{}", &(cell_id + 1))
     }
 
-    pub fn get_cell_co(&self, cell_id: usize) -> Result<Vec<Rc<Cell<PatroNode>>>, MeshError> {
-        let cell_opt = self.cells.get(&cell_id);
+    pub fn get_cell_co(&self, cell_id: usize) -> Result<Vec<&Cell<PatroNode>>, MeshError> {
 
-        if Option::is_none(&cell_opt) {
-            let mess = format!("cell_id {} not found in cells", cell_id);
-            return Err(MeshError{message: mess} );
-        }
-
-        let node_ids = self.cells.get(&cell_id).unwrap().get_co();
+        let node_ids = match self.cells.get(&cell_id){
+            Some(val) => val.get_co(),
+            None => {
+                let mess = format!("cell_id {} not found in cells", cell_id);
+                return Err(MeshError{message: mess} );
+            }
+        };
         let out = node_ids
             .iter()
-            .map(|node_id| self.nodes[node_id].clone())
+            .map(|node_id| &self.nodes[node_id])
             .collect();
 
         Ok(out)
@@ -179,7 +178,7 @@ impl PatroMesh {
                 Ok(p) => p,
                 Err(e) => return Err(e),
             };
-            self.cells.insert(self.next_cell_id, Rc::new(cell));
+            self.cells.insert(self.next_cell_id, Box::new(cell));
             cells.push(self.next_cell_id);
             self.next_cell_id += 1;
         }
@@ -386,7 +385,7 @@ mod tests {
                 let result = mesh.edit_node(&0, Some(10.2_f64), Some(0.2_f64), None);
                 assert_eq!(result, true);
             }
-            let first_node = mesh.nodes[&0].clone().get();
+            let first_node = &mesh.nodes[&0].get();
 
             assert_eq!(first_node.x, 10.2_f64);
             assert_eq!(first_node.y, 0.2_f64);

@@ -1,42 +1,42 @@
 use std::rc::Rc;
-use ndarray::Array1;
+use ndarray::{Array1};
 use patro_node::PatroNode;
 use crate::patro_node;
 
-
 pub trait PatroCell {
-    fn get_co(&self) -> Vec<usize>;
+    fn get_co(&self) -> Array1<usize>;
+    // TODO : RENVOYER UN RESULT POUR GERER LE CAS OU ON NE DONNE PAS LE BON NOMBRE DE CONNECTIVITE
     fn new(connectivity: &Array1<usize>) -> Self where Self: Sized;
 }
 
 #[derive(Debug, Clone)]
 pub struct Poi1Cell {
-    pub co: [usize; 1],
+    pub co: Array1<usize>,
 }
 
 impl PatroCell for Poi1Cell {
 
-    fn get_co(&self) -> Vec<usize> {
-        self.co.to_vec()
+    fn get_co(&self) -> Array1<usize> {
+        self.co.clone()
     }
 
     fn new(connectivity: &Array1<usize>) -> Poi1Cell {
-        Poi1Cell { co: [connectivity[0]]}
+        Poi1Cell { co: connectivity.clone()}
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Seg2Cell {
-    pub co: [usize; 2],
+    pub co: Array1<usize>,
 }
 
 impl PatroCell for Seg2Cell {
 
-    fn get_co(&self) -> Vec<usize> {
-        self.co.to_vec()
+    fn get_co(&self) -> Array1<usize> {
+        self.co.clone()
     }
     fn new(connectivity: &Array1<usize>) -> Seg2Cell {
-        Seg2Cell { co: [connectivity[0], connectivity[1]]}
+        Seg2Cell { co: connectivity.clone()}
     }
 }
 
@@ -64,3 +64,4 @@ pub struct Pyram5Cell {
 pub struct Hexa8Cell {
     pub co: [Rc<PatroNode>; 8],
 }
+
