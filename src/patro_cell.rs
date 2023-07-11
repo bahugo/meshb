@@ -1,11 +1,9 @@
 use ndarray::Array1;
 
-pub trait PatroCell {
+
+pub trait PatroCell{
     fn get_co(&self) -> Array1<usize>;
-    // TODO : RENVOYER UN RESULT POUR GERER LE CAS OU ON NE DONNE PAS LE BON NOMBRE DE CONNECTIVITE
-    fn new(connectivity: &Array1<usize>) -> Self
-    where
-        Self: Sized;
+    fn new(connectivity: &Array1<usize>) -> Result<Self, &'static str> where Self: Sized;
 }
 
 #[derive(Debug, Clone)]
@@ -18,10 +16,14 @@ impl PatroCell for Poi1Cell {
         self.co.clone()
     }
 
-    fn new(connectivity: &Array1<usize>) -> Poi1Cell {
-        Poi1Cell {
-            co: connectivity.clone(),
+    fn new(connectivity: &Array1<usize>) -> Result<Poi1Cell, &'static str>{
+
+        if connectivity.len() != 1 {
+            return Err("Poi1Cell connectivity must be of length 1");
         }
+        Ok(Poi1Cell {
+            co: connectivity.clone(),
+        })
     }
 }
 
@@ -34,10 +36,13 @@ impl PatroCell for Seg2Cell {
     fn get_co(&self) -> Array1<usize> {
         self.co.clone()
     }
-    fn new(connectivity: &Array1<usize>) -> Seg2Cell {
-        Seg2Cell {
-            co: connectivity.clone(),
+    fn new(connectivity: &Array1<usize>) -> Result<Seg2Cell, &'static str> {
+        if connectivity.len() != 2 {
+            return Err("Poi1Cell connectivity must be of length 2");
         }
+        Ok(Seg2Cell {
+            co: connectivity.clone(),
+        })
     }
 }
 

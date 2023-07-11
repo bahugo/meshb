@@ -136,30 +136,6 @@ impl PatroMesh {
         }
     }
 
-    pub fn add_one_cell(
-        connectivity: &Array1<usize>,
-        ty: PatroCellType,
-    ) -> Result<Box<dyn PatroCell>, &'static str> {
-        match ty {
-            PatroCellType::POI1 => Ok(Box::new(Poi1Cell::new(connectivity))),
-            PatroCellType::SEG2 => Ok(Box::new(Seg2Cell::new(connectivity))),
-            PatroCellType::TRIA3 => {
-                unimplemented!()
-            }
-            PatroCellType::QUAD4 => {
-                unimplemented!()
-            }
-            PatroCellType::PENTA6 => {
-                unimplemented!()
-            }
-            PatroCellType::PYRAM5 => {
-                unimplemented!()
-            }
-            PatroCellType::HEXA8 => {
-                unimplemented!()
-            }
-        }
-    }
     pub fn get_cell_name(cell_id: usize) -> String {
         format!("M{}", &(cell_id + 1))
     }
@@ -185,7 +161,7 @@ impl PatroMesh {
         T: PatroCell,
     {
         let cell = T::new(connectivity);
-        Ok(cell)
+        cell
     }
 
     pub fn add_cells_of_type<T>(
@@ -208,15 +184,52 @@ impl PatroMesh {
         Ok(cells)
     }
 
-    pub fn edit_cell(&mut self, index: usize, connectivity: &Array1<usize>, ty: PatroCellType,) -> bool {
-        match Self::add_one_cell(connectivity, ty){
-            Ok(val) => {
-                if  self.cells.insert(index, val).is_none(){
+    fn extract_cell_result<T>(
+        cell: Result<T, &'static str>,
+    ) -> Result<Box<dyn PatroCell>, &'static str>
+    where
+        T: PatroCell + 'static,
+    {
+        match cell {
+            Ok(val) => Ok(Box::new(val)),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub fn edit_cell(
+        &mut self,
+        index: usize,
+        connectivity: &Array1<usize>,
+        ty: PatroCellType,
+    ) -> bool {
+        let val: Result<Box<dyn PatroCell>, &'static str>;
+        match ty {
+            PatroCellType::POI1 => val = Self::extract_cell_result(Poi1Cell::new(connectivity)),
+            PatroCellType::SEG2 => val = Self::extract_cell_result(Seg2Cell::new(connectivity)),
+            PatroCellType::TRIA3 => {
+                unimplemented!();
+            }
+            PatroCellType::QUAD4 => {
+                unimplemented!()
+            }
+            PatroCellType::PENTA6 => {
+                unimplemented!()
+            }
+            PatroCellType::PYRAM5 => {
+                unimplemented!()
+            }
+            PatroCellType::HEXA8 => {
+                unimplemented!()
+            }
+        }
+        match val {
+            Ok(ok_val) => {
+                if self.cells.insert(index, ok_val).is_none() {
                     return false;
                 };
                 true
-            },
-            Err(_e) => false
+            }
+            Err(_e) => false,
         }
     }
 
@@ -320,6 +333,13 @@ mod tests {
         ];
         mesh.add_nodes(&nodes, &nodes_names);
         mesh
+    }
+
+    #[test]
+    fn patro_mesh_add_cells_should_return_err_when_connectivity_has_bad_len() {
+        let mut mesh = get_mesh_with_six_nodes();
+        let new_cells = mesh.add_cells(&[array![0], array![2,2]], PatroCellType::POI1);
+        assert_eq!(new_cells.is_err(), true);
     }
 
     #[test]
