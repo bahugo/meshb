@@ -3,7 +3,7 @@ use core::fmt;
 use ndarray::prelude::*;
 
 use std::cell::{Cell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 
 use crate::patro_cell::{PatroCell, Poi1Cell, Seg2Cell};
@@ -53,9 +53,9 @@ pub struct PatroMesh {
     // mailles
     pub cells: HashMap<usize, Box<dyn PatroCell>>,
     // gno [Group]: groupes de noeuds (dictionnaire de arrays de numéros de noeuds)
-    pub gno: HashMap<String, Vec<usize>>,
+    pub gno: HashMap<&'static str, Vec<usize>>,
     // gma [Group]: groupes de mailles (dictionnaire de arrays de numéros de mailles)
-    pub gma: HashMap<String, Vec<usize>>,
+    pub gma: HashMap<&'static str, Vec<usize>>,
 }
 
 impl PatroMesh {
@@ -232,7 +232,20 @@ impl PatroMesh {
             Err(_e) => false,
         }
     }
+    pub fn create_cell_group(&mut self, name: &'static str, cell_ids: &Vec<usize>) -> Result<(), &'static str> {
+        let unique_cell_ids: HashSet<usize> = cell_ids.clone().into_iter().collect();
+        let existing_cell_ids: HashSet<usize> = self.cells.keys().cloned().collect();
+        let intersection = existing_cell_ids.intersection(&unique_cell_ids).collect::<Vec<&usize>>();
 
+        if intersection.len() != unique_cell_ids.len()
+        {
+            return Err("At least one cell_id is not containeda in mesh");
+        }
+        let mut target_cell_ids = unique_cell_ids.into_iter().collect::<Vec<usize>>();
+        target_cell_ids.sort();
+        self.gma.insert(name, target_cell_ids);
+        Ok(())
+    }
     pub fn read_mesh(filename: &str, format: PatroMeshFormat) -> PatroMesh {
         let mesh = PatroMesh::new();
         match format {
@@ -253,6 +266,8 @@ impl PatroMesh {
 
 #[cfg(test)]
 mod tests {
+
+    use std::ops::Deref;
 
     use crate::patro_mesh::PatroMesh;
     use crate::patro_mesh_enums::PatroCellType;
@@ -456,6 +471,21 @@ mod tests {
             mesh.edit_cell(0, &array![0], PatroCellType::POI1);
             let first_cell = &mesh.cells[&0];
             assert_eq!(first_cell.get_co().len(), 1);
+        }
+    }
+    #[test]
+    fn create_cell_group_should_work(){
+        let mut mesh = get_mesh_with_six_nodes();
+        let new_cells = mesh.add_cells(&[array![0, 1], array![2, 3]], PatroCellType::SEG2).unwrap();
+        let _new_cells_2 =mesh.add_cells(&[array![0, 1], array![2, 3]], PatroCellType::SEG2).unwrap();
+        let group_cell_ids = new_cells.clone();
+        assert_eq!(mesh.create_cell_group("GROUP1", &group_cell_ids), Ok(()));
+        let gma = &mesh.gma.clone();
+        if let Some(actual_cell_ids) = gma.get("GROUP1"){
+            assert_eq!(actual_cell_ids, &new_cells.clone());
+        }
+        else {
+            panic!()
         }
     }
 }
