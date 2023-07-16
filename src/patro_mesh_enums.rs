@@ -1,4 +1,4 @@
-use derive_more::{Display, From};
+use derive_more::{Display};
 
 #[derive(Display)]
 pub enum PatroMeshFormat {

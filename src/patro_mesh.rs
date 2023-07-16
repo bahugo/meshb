@@ -1,8 +1,8 @@
 use core::fmt;
-use derive_more::{Display, From};
+
 use ndarray::prelude::*;
-use num_traits::ToPrimitive;
-use std::cell::{self, Cell};
+
+use std::cell::{Cell};
 use std::collections::HashMap;
 use std::fs;
 
@@ -234,7 +234,7 @@ impl PatroMesh {
     }
 
     pub fn read_mesh(filename: &str, format: PatroMeshFormat) -> PatroMesh {
-        let mut mesh = PatroMesh::new();
+        let mesh = PatroMesh::new();
         match format {
             PatroMeshFormat::Mail => mesh.read_mail_format(filename),
         }
@@ -243,7 +243,7 @@ impl PatroMesh {
     pub fn read_mail_format(&self, filename: &str) {
         println!("Reading file {}", filename);
 
-        let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+        let _contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
 
         // TODO: parse contents with regex
 
@@ -254,7 +254,7 @@ impl PatroMesh {
 #[cfg(test)]
 mod tests {
 
-    use crate::patro_mesh::{MeshError, PatroMesh};
+    use crate::patro_mesh::PatroMesh;
     use crate::patro_mesh_enums::PatroCellType;
     use crate::patro_node::PatroNode;
     use ndarray::array;
