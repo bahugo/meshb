@@ -1,32 +1,31 @@
 extern crate core;
 
-use crate::patro_mesh::PatroMesh;
-
 mod patro_mesh;
 mod patro_mesh_enums;
 mod patro_node;
 mod patro_cell;
 
-fn main() -> PatroMesh
-{
-    let mesh = PatroMesh::new();
-    mesh
+pub mod lib{
+    pub use crate::patro_mesh::PatroMesh;
+    pub use crate::patro_mesh_enums::{PatroCellType, PatroMeshFormat};
+    pub use crate::patro_node::PatroNode;
+    pub use crate::patro_cell::{Poi1Cell, Seg2Cell};
 }
 
 #[cfg(test)]
 mod tests {
-    use std::env::{current_dir, join_paths};
-    use ndarray;
-    use ndarray::prelude::*;
-    use std::fs;
-    use std::fs::File;
-    use std::io::Write;
-    use std::ops::Index;
-    use std::path::Path;
-    use num_traits::cast::ToPrimitive;
-    use crate::patro_mesh::PatroMesh;
-    use crate::patro_mesh_enums::PatroCellType;
-    use crate::patro_node::PatroNode;
+    // use std::env::{current_dir, join_paths};
+    // use ndarray;
+    // use ndarray::prelude::*;
+    // use std::fs;
+    // use std::fs::File;
+    // use std::io::Write;
+    // use std::ops::Index;
+    // use std::path::Path;
+    // use num_traits::cast::ToPrimitive;
+    // use crate::patro_mesh::PatroMesh;
+    // use crate::patro_mesh_enums::PatroCellType;
+    // use crate::patro_node::PatroNode;
 
 
     // #[test]
