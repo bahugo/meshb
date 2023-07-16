@@ -232,6 +232,20 @@ impl PatroMesh {
             Err(_e) => false,
         }
     }
+    pub fn create_node_group(&mut self, name: &'static str, node_ids: &Vec<usize>) -> Result<(), &'static str> {
+        let unique_node_ids: HashSet<usize> = node_ids.clone().into_iter().collect();
+        let existing_node_ids: HashSet<usize> = self.nodes.keys().cloned().collect();
+        let intersection = existing_node_ids.intersection(&unique_node_ids).collect::<Vec<&usize>>();
+
+        if intersection.len() != unique_node_ids.len()
+        {
+            return Err("At least one node_id is not contained in mesh");
+        }
+        let mut target_node_ids = unique_node_ids.into_iter().collect::<Vec<usize>>();
+        target_node_ids.sort();
+        self.gma.insert(name, target_node_ids);
+        Ok(())
+    }
     pub fn create_cell_group(&mut self, name: &'static str, cell_ids: &Vec<usize>) -> Result<(), &'static str> {
         let unique_cell_ids: HashSet<usize> = cell_ids.clone().into_iter().collect();
         let existing_cell_ids: HashSet<usize> = self.cells.keys().cloned().collect();
@@ -239,7 +253,7 @@ impl PatroMesh {
 
         if intersection.len() != unique_cell_ids.len()
         {
-            return Err("At least one cell_id is not containeda in mesh");
+            return Err("At least one cell_id is not contained in mesh");
         }
         let mut target_cell_ids = unique_cell_ids.into_iter().collect::<Vec<usize>>();
         target_cell_ids.sort();
@@ -474,18 +488,25 @@ mod tests {
         }
     }
     #[test]
+    fn create_node_group_should_work(){
+        let mut mesh = get_mesh_with_six_nodes();
+        let _new_cells = add_two_seg2_cells(&mut mesh).unwrap();
+        let group_node_ids = vec![0,2,4];
+        assert_eq!(mesh.create_node_group("GROUP1", &group_node_ids), Ok(()));
+        assert_eq!(mesh.create_node_group("GROUP_NOT_POSSIBLE", &vec![1000]).is_err(), true);
+        let gma = &mesh.gma.clone();
+        let actual_node_ids = gma.get("GROUP1").unwrap();
+        assert_eq!(actual_node_ids, &group_node_ids.clone());
+    }
+    #[test]
     fn create_cell_group_should_work(){
         let mut mesh = get_mesh_with_six_nodes();
-        let new_cells = mesh.add_cells(&[array![0, 1], array![2, 3]], PatroCellType::SEG2).unwrap();
-        let _new_cells_2 =mesh.add_cells(&[array![0, 1], array![2, 3]], PatroCellType::SEG2).unwrap();
+        let new_cells = add_two_seg2_cells(&mut mesh).unwrap();
         let group_cell_ids = new_cells.clone();
         assert_eq!(mesh.create_cell_group("GROUP1", &group_cell_ids), Ok(()));
+        assert_eq!(mesh.create_cell_group("GROUP_NOT_POSSIBLE", &vec![1000]).is_err(), true);
         let gma = &mesh.gma.clone();
-        if let Some(actual_cell_ids) = gma.get("GROUP1"){
-            assert_eq!(actual_cell_ids, &new_cells.clone());
-        }
-        else {
-            panic!()
-        }
+        let actual_cell_ids = gma.get("GROUP1").unwrap();
+        assert_eq!(actual_cell_ids, &new_cells.clone());
     }
 }
