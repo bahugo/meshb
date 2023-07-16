@@ -4,6 +4,7 @@ mod patro_mesh;
 mod patro_mesh_enums;
 mod patro_node;
 mod patro_cell;
+mod mail_parser;
 
 pub mod lib{
     pub use crate::patro_mesh::PatroMesh;
