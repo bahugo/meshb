@@ -35,6 +35,7 @@ mod tests{
     fn should_parse_node_3d_coords() {
         assert_debug_snapshot!(node_3d_coords("1 2 3"));
         assert_debug_snapshot!(node_3d_coords("   1  2 3 "));
+        assert_debug_snapshot!(node_3d_coords("   1.0  2 3.01 "));
 
     }
 }
