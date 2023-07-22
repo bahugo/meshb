@@ -1,0 +1,12 @@
+---
+source: src/mail_parser.rs
+expression: "node_3d_section(\"COOR_3D  \\nN1 2  3.0 4\\nBLABLA\\nN2 3  4 4\\nFINSF\")"
+---
+Err(
+    Error(
+        Error {
+            input: "BLABLA\nN2 3  4 4\nFINSF",
+            code: Tag,
+        },
+    ),
+)
