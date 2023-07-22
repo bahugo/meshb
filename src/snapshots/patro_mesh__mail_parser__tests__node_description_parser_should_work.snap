@@ -1,0 +1,12 @@
+---
+source: src/mail_parser.rs
+expression: "node_description(\"23\")"
+---
+Err(
+    Error(
+        Error {
+            input: "23",
+            code: Alpha,
+        },
+    ),
+)

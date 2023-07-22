@@ -1,0 +1,12 @@
+---
+source: src/mail_parser.rs
+expression: "node_description(\"N12\")"
+---
+Err(
+    Error(
+        Error {
+            input: "",
+            code: Float,
+        },
+    ),
+)

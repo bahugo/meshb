@@ -1,0 +1,12 @@
+---
+source: src/mail_parser.rs
+expression: "node_3d_coords(\" 1,2  23.3 233\")"
+---
+Err(
+    Error(
+        Error {
+            input: ",2  23.3 233",
+            code: MultiSpace,
+        },
+    ),
+)
