@@ -45,7 +45,7 @@ fn node_3d_coords(input: &str) -> IResult<&str, [f32;3]> {
 }
 
 fn node_description(input: &str) -> IResult<&str, Node>{
-    let (input, (name, [x, y, z])) = tuple((node_name, node_3d_coords ))(input)?;
+    let (input, (_, name, _, [x, y, z],_)) = tuple((multispace0, node_name, multispace0, node_3d_coords, multispace0 ))(input)?;
     Ok((input, Node{name, x,y,z}))
 }
 
@@ -60,6 +60,7 @@ mod tests{
         assert_debug_snapshot!(node_description("23"));
         assert_debug_snapshot!(node_description("N12"));
         assert_debug_snapshot!(node_description("N12 1.2  23.3 233"));
+        assert_debug_snapshot!(node_description("  N12 1.2  23.3 233\n"));
     }
 
     #[test]
@@ -76,5 +77,6 @@ mod tests{
         assert_debug_snapshot!(node_3d_coords("   1.0  2 3.01 "));
         assert_debug_snapshot!(node_3d_coords("   1.0e1  2E+1 3.01E+00 "));
         assert_debug_snapshot!(node_3d_coords(" 1,2  23.3 233"));
+        assert_debug_snapshot!(node_3d_coords("   1\n  2 3 "));
     }
 }
