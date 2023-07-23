@@ -1,12 +1,12 @@
 ---
 source: src/mail_parser.rs
-expression: "node_3d_section(\"COOR_3D\\nN1 2  3.0 4\\nN2 3  4 4\\nFINSF\")"
+expression: "mail_final_parser(\"COOR_3D  \\n\\nN1 2  3.0 4\\nFINSF\\nCOOR_3D  \\nN2 2  3.0 4\\nN3 3  4 4\\nFINSF\")"
 ---
 Ok(
     (
         "",
-        NodeElts(
-            [
+        MailParseOutput {
+            nodes: [
                 Node {
                     name: "N1",
                     x: 2.0,
@@ -15,11 +15,18 @@ Ok(
                 },
                 Node {
                     name: "N2",
+                    x: 2.0,
+                    y: 3.0,
+                    z: 4.0,
+                },
+                Node {
+                    name: "N3",
                     x: 3.0,
                     y: 4.0,
                     z: 4.0,
                 },
             ],
-        ),
+            cells: [],
+        },
     ),
 )

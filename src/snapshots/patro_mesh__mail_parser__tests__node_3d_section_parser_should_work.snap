@@ -5,13 +5,15 @@ expression: "node_3d_section(\"COOR_3D  \\n\\nN1 2  3.0 4\\nFINSF\")"
 Ok(
     (
         "",
-        [
-            Node {
-                name: "N1",
-                x: 2.0,
-                y: 3.0,
-                z: 4.0,
-            },
-        ],
+        NodeElts(
+            [
+                Node {
+                    name: "N1",
+                    x: 2.0,
+                    y: 3.0,
+                    z: 4.0,
+                },
+            ],
+        ),
     ),
 )
