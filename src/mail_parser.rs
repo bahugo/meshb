@@ -6,7 +6,7 @@ use nom::{
         space0, space1,
     },
     combinator::{opt, recognize, value},
-    multi::{fold_many0, many0, many1},
+    multi::{fold_many0, many0, many1, many_m_n},
     number::complete::float,
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
@@ -88,23 +88,25 @@ fn node_3d_coords(input: &str) -> IResult<&str, [f32; 3]> {
 }
 
 fn node_description(input: &str) -> IResult<&str, Node> {
-    let (input, (_, name, _, [x, y, z], _, _)) = tuple((
+    let (input, (_, name, _, [x, y, z], _)) = tuple((
         space0,
         node_name,
         space0,
         node_3d_coords,
-        space0,
-        line_ending,
+        multispace0,
     ))(input)?;
     Ok((input, Node { name, x, y, z }))
 }
 
 fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp> {
-    let (input, (name, node_names, _, _)) = tuple((
+    let nb_nodes: usize = match cell_type {
+        CellType::POI1 => 1,
+        CellType::SEG2 => 2,
+    };
+    let (input, (name, node_names, _)) = tuple((
         cell_name,
-        many1(preceded(space1, node_name)),
-        space0,
-        line_ending,
+        many_m_n(nb_nodes, nb_nodes, preceded(multispace1, node_name)),
+        multispace0,
     ))(input)?;
     Ok((
         input,
@@ -218,6 +220,7 @@ mod tests {
     fn poi1_section_parser_should_work() {
         assert_debug_snapshot!(poi1_section("POI1  \n\nM1 N2   \nFINSF\n"));
         assert_debug_snapshot!(poi1_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF\n"));
+        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF\n"));
     }
     #[test]
     fn mail_final_parser_should_work() {
