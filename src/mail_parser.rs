@@ -1,15 +1,15 @@
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take},
+    bytes::complete::{tag, take, is_not},
     character::complete::{
         alpha1, anychar, char, digit1, line_ending, multispace0, multispace1, newline, one_of,
         space0, space1,
     },
-    combinator::{opt, recognize, value},
+    combinator::{opt, recognize, value, peek},
     multi::{fold_many0, many0, many1},
     number::complete::float,
     sequence::{delimited, pair, preceded, terminated, tuple},
-    IResult,
+    IResult, error::ParseError,
 };
 
 //  COOR_3D
@@ -149,6 +149,17 @@ fn poi1_section(input: &str) -> IResult<&str, MailValue> {
     Ok((input, MailValue::Cells(cells)))
 }
 
+fn peol_comment(i: &str) -> IResult<&str, ()> {
+  value(
+    (), // Output is thrown away.
+    pair(char('%'), is_not("\n\r"))
+  )(i)
+}
+
+fn comment_eraser(input: &str) -> IResult<&str, ()> {
+    value((), tuple((peek(is_not("\n\r")), peol_comment, peek(line_ending))))(input)
+}
+
 fn mail_final_parser(input: &str) -> IResult<&str, MailParseOutput> {
     let mail_elt_parser = preceded(multispace0, alt((node_3d_section, poi1_section)));
     let (input, output) = fold_many0(
@@ -220,10 +231,16 @@ mod tests {
         assert_debug_snapshot!(poi1_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF\n"));
     }
     #[test]
+    fn comment_eraser_should_work() {
+        assert_debug_snapshot!(peol_comment("%bla"));
+        assert_debug_snapshot!(comment_eraser( "COOR_3D  %bla\n\nN1"));
+    }
+    #[test]
     fn mail_final_parser_should_work() {
         assert_debug_snapshot!(mail_final_parser(
             "COOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"
         ));
         assert_debug_snapshot!(mail_final_parser("COOR_3D  \n\nN1 2  3.0 4\nFINSF\nPOI1\nM1 N1\nFINSF\n\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"));
     }
+
 }
