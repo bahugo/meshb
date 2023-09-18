@@ -9,9 +9,10 @@ use nom::{
     multi::{fold_many0, many0, many1, many_m_n},
     number::complete::float,
     sequence::{delimited, pair, preceded, terminated, tuple},
-    IResult, error::ParseError,
+    IResult, error::ParseError, Slice,
 };
-
+use nom_supreme::error::ErrorTree;
+use nom_supreme::ParserExt;
 //  COOR_3D
 //  N1        1.00000000000000E+00  4.00000000000000E+00  2.50000000000000E+00
 //  N2        2.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
@@ -151,16 +152,21 @@ fn poi1_section(input: &str) -> IResult<&str, MailValue> {
     Ok((input, MailValue::Cells(cells)))
 }
 
-fn peol_comment(i: &str) -> IResult<&str, ()> {
+fn peol_comment(i: &str) -> IResult<&str, (), ErrorTree<&str>> {
   value(
     (), // Output is thrown away.
-    pair(char('%'), is_not("\n\r"))
-  )(i)
+    pair(
+            char('%').context("Commentary symbol"),
+            is_not("\n\r").context("Anything but end of line")
+         )
+    .context("Commentary section")
+ )
+      (i)
 }
 
-fn comment_eraser(input: &str) -> IResult<&str, ()> {
-     let (input, output) = tuple((peek(is_not("%")),
-                                  // peol_comment,
+fn comment_eraser(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
+     let (i, (preceding, comment, ending)) = tuple((is_not("%"),
+                                  peol_comment,
                                    peek(line_ending)
                                   ))(input)?;
      Ok((input, ()))
