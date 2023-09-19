@@ -1,0 +1,10 @@
+---
+source: src/mail_parser.rs
+expression: "clean_comments(\"COOR_3D  %bla\\n\\nN1\")"
+---
+Ok(
+    (
+        "",
+        "COOR_3D  \n\nN1",
+    ),
+)

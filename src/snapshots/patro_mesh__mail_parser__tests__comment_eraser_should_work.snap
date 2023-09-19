@@ -1,0 +1,10 @@
+---
+source: src/mail_parser.rs
+expression: "peol_comment(\"%bla\")"
+---
+Ok(
+    (
+        "",
+        (),
+    ),
+)

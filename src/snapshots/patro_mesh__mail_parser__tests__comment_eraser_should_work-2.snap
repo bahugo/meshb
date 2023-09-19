@@ -1,0 +1,10 @@
+---
+source: src/mail_parser.rs
+expression: "parse_single_line_comment(\"%ble\\n\")"
+---
+Ok(
+    (
+        "\n",
+        (),
+    ),
+)

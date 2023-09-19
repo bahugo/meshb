@@ -1,0 +1,10 @@
+---
+source: src/mail_parser.rs
+expression: "clean_comments(\"C%bla\\n\\nN1\")"
+---
+Ok(
+    (
+        "",
+        "C\n\nN1",
+    ),
+)

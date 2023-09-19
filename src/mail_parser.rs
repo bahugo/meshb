@@ -5,14 +5,16 @@ use nom::{
         alpha0, alpha1, anychar, char, digit1, line_ending, multispace0, multispace1, newline, one_of,
         space0, space1,
     },
-    combinator::{opt, recognize, value, peek},
-    multi::{fold_many0, many0, many1, many_m_n},
+    combinator::{opt, recognize, value, peek, eof},
+    multi::{fold_many0, many0, many1, many_m_n, many_till},
     number::complete::float,
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult, error::ParseError, Slice,
 };
 use nom_supreme::error::ErrorTree;
 use nom_supreme::ParserExt;
+use nom_supreme::final_parser::final_parser;
+
 //  COOR_3D
 //  N1        1.00000000000000E+00  4.00000000000000E+00  2.50000000000000E+00
 //  N2        2.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
@@ -64,17 +66,17 @@ pub struct CellProp<'a> {
     pub nodes: Vec<&'a str>,
 }
 
-fn node_name(input: &str) -> IResult<&str, &str> {
+fn node_name(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
     let (input, name) = recognize(pair(alpha1, digit1))(input)?;
     Ok((input, name))
 }
 
-fn cell_name(input: &str) -> IResult<&str, &str> {
+fn cell_name(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
     let (input, name) = recognize(pair(alpha1, digit1))(input)?;
     Ok((input, name))
 }
 
-fn node_3d_coords(input: &str) -> IResult<&str, [f32; 3]> {
+fn node_3d_coords(input: &str) -> IResult<&str, [f32; 3], ErrorTree<&str>> {
     let (input, (_, x, _, y, _, z, _)) = tuple((
         space0,
         float,
@@ -88,7 +90,7 @@ fn node_3d_coords(input: &str) -> IResult<&str, [f32; 3]> {
     Ok((input, [x, y, z]))
 }
 
-fn node_description(input: &str) -> IResult<&str, Node> {
+fn node_description(input: &str) -> IResult<&str, Node, ErrorTree<&str>> {
     let (input, (_, name, _, [x, y, z], _)) = tuple((
         space0,
         node_name,
@@ -99,7 +101,7 @@ fn node_description(input: &str) -> IResult<&str, Node> {
     Ok((input, Node { name, x, y, z }))
 }
 
-fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp> {
+fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp, ErrorTree<&str>> {
     let nb_nodes: usize = match cell_type {
         CellType::POI1 => 1,
         CellType::SEG2 => 2,
@@ -119,15 +121,15 @@ fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp>
     ))
 }
 
-fn end_section_tag(input: &str) -> IResult<&str, &str> {
+fn end_section_tag(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
     tag("FINSF")(input)
 }
 
-fn start_3d_node_section(input: &str) -> IResult<&str, &str> {
+fn start_3d_node_section(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
     tag("COOR_3D")(input)
 }
 
-fn node_3d_section(input: &str) -> IResult<&str, MailValue> {
+fn node_3d_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
     let (input, (_, _, nodes, _, _, _)) = tuple((
         tuple((space0, start_3d_node_section, space0)),
         many1(line_ending),
@@ -139,7 +141,7 @@ fn node_3d_section(input: &str) -> IResult<&str, MailValue> {
     Ok((input, MailValue::NodeElts(nodes)))
 }
 
-fn poi1_section(input: &str) -> IResult<&str, MailValue> {
+fn poi1_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
     let (input, (_, cells, _, _, _)) = tuple((
         tuple((space0, tag("POI1"), space0)),
         many0(preceded(multispace0, |input| {
@@ -152,31 +154,33 @@ fn poi1_section(input: &str) -> IResult<&str, MailValue> {
     Ok((input, MailValue::Cells(cells)))
 }
 
-fn peol_comment(i: &str) -> IResult<&str, (), ErrorTree<&str>> {
-  value(
-    (), // Output is thrown away.
-    pair(
-            char('%').context("Commentary symbol"),
-            is_not("\n\r").context("Anything but end of line")
-         )
-    .context("Commentary section")
- )
-      (i)
+
+fn parse_single_line_comment(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
+  let (input, _) = preceded(tag("%").context("commentary symbol"), is_not("\n").context("not end of line")
+  )(input)?;
+  Ok((input, ()))
 }
 
-fn comment_eraser(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
-     let (i, (preceding, comment, ending)) = tuple((is_not("%"),
-                                  peol_comment,
-                                   peek(line_ending)
-                                  ))(input)?;
-     Ok((input, ()))
-    // value((), tuple((peek(is_not("%")), peol_comment, peek(line_ending))))(input)
-    // value((), peek(is_not("%")) )(input)
-    // value((), tuple((many0(peek(is_not("\n\r"))), peol_comment, peek(line_ending))))(input)
+fn parse_end_of_file(s:&str) -> IResult<&str, (), ErrorTree<&str>> {
+  value((), eof)(s)
 }
 
-fn mail_final_parser(input: &str) -> IResult<&str, MailParseOutput> {
+fn split_on_comment(s: &str) -> IResult<&str, Vec<&str>, ErrorTree<&str>> {
+  let (s_rest, (s_before, _)) = many_till(is_not("%"),
+              alt((parse_single_line_comment, parse_end_of_file))
+  )(s)?;
+  Ok((s_rest, s_before))
+}
+
+fn clean_comments(s: &str) -> IResult<&str, String, ErrorTree<&str>> {
+  let (rest, (non_comments, _)) = many_till(split_on_comment, parse_end_of_file)(s)?;
+
+    Ok((rest, non_comments.concat().concat()))
+}
+
+fn mail_parser(input: &str) -> IResult<&str, MailParseOutput, ErrorTree<&str>> {
     let mail_elt_parser = preceded(multispace0, alt((node_3d_section, poi1_section)));
+
     let (input, output) = fold_many0(
         mail_elt_parser,
         MailParseOutput::new,
@@ -191,8 +195,20 @@ fn mail_final_parser(input: &str) -> IResult<&str, MailParseOutput> {
             }
             _ => acc,
         },
-    )(input)?;
+        )(input)?;
+
     Ok((input, output))
+}
+
+fn mail_final_parser(input: &str) -> Result<MailParseOutput, ()>{
+
+    let result_clean = clean_comments(input);
+    let input_cleaned: String;
+    match result_clean{
+        Err(e) => return Err(()),
+        Ok((rest, cleaned_input)) => input_cleaned = cleaned_input
+    }
+    final_parser(mail_parser)(&input_cleaned)
 }
 
 #[cfg(test)]
@@ -248,11 +264,12 @@ mod tests {
     }
     #[test]
     fn comment_eraser_should_work() {
-        assert_debug_snapshot!(peol_comment("%bla"));
-        assert_debug_snapshot!(comment_eraser( "%bla\n"));
-        assert_debug_snapshot!(comment_eraser( "C%bla\n"));
-        assert_debug_snapshot!(comment_eraser( "C%bla\n\nN1"));
-        assert_debug_snapshot!(comment_eraser( "COOR_3D  %bla\n\nN1"));
+        assert_debug_snapshot!(parse_single_line_comment("%ble\n"));
+        assert_debug_snapshot!(split_on_comment("C%bla\n"));
+        assert_debug_snapshot!(clean_comments( "C%bla\n"));
+        assert_debug_snapshot!(clean_comments("C%bla\nSDD%bla2\n"));
+        assert_debug_snapshot!(clean_comments( "C%bla\n\nN1"));
+        assert_debug_snapshot!(clean_comments( "COOR_3D  %bla\n\nN1"));
     }
     #[test]
     fn mail_final_parser_should_work() {
