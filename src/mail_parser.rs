@@ -132,11 +132,11 @@ fn start_3d_node_section(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
 fn node_3d_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
     let (input, (_, _, nodes, _, _, _)) = tuple((
         tuple((space0, start_3d_node_section, space0)),
-        many1(line_ending),
+        many1(comment_or_line_ending),
         many0(preceded(multispace0, node_description)),
-        many0(line_ending),
+        many0(comment_or_line_ending),
         end_section_tag,
-        many0(line_ending),
+        many0(comment_or_line_ending),
     ))(input)?;
     Ok((input, MailValue::NodeElts(nodes)))
 }
@@ -147,9 +147,10 @@ fn poi1_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
         many0(preceded(multispace0, |input| {
             cell_description(CellType::POI1, input)
         })),
-        many0(line_ending),
+        many0(comment_or_line_ending),
         end_section_tag,
-        many0(line_ending),
+        many0(comment_or_line_ending),
+
     ))(input)?;
     Ok((input, MailValue::Cells(cells)))
 }
@@ -269,22 +270,13 @@ mod tests {
         assert_debug_snapshot!(comment_or_line_ending("% ble &\n"));
         assert_debug_snapshot!(comment_or_line_ending("ddf % ble &\n"));
     }
-    // #[test]
-    // fn comment_eraser_should_work() {
-    //     assert_debug_snapshot!(parse_single_line_comment("%ble\n"));
-    //     assert_debug_snapshot!(split_on_comment("C%bla\n"));
-    //     assert_debug_snapshot!(clean_comments( "C%bla\n"));
-    //     assert_debug_snapshot!(clean_comments("C%bla\nSDD%bla2\n"));
-    //     assert_debug_snapshot!(clean_comments( "C%bla\n\nN1"));
-    //     assert_debug_snapshot!(clean_comments( "COOR_3D  %bla\n\nN1"));
-    // }
     #[test]
     fn mail_final_parser_should_work() {
         assert_debug_snapshot!(mail_final_parser(
             "COOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"
         ));
         assert_debug_snapshot!(mail_final_parser("COOR_3D  \n\nN1 2  3.0 4\nFINSF\nPOI1\nM1 N1\nFINSF\n\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"));
-        assert_debug_snapshot!(mail_final_parser("COOR_3D %comment \n\n    % another comment\n"));
+        assert_debug_snapshot!(mail_final_parser("COOR_3D %comment \nN1 2  3.0 4\n    % another comment\nFINSF"));
     }
 
 }
