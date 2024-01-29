@@ -4,9 +4,11 @@ expression: "end_section_tag(\"TINSF\")"
 ---
 Err(
     Error(
-        Error {
-            input: "TINSF",
-            code: Tag,
+        Base {
+            location: "TINSF",
+            kind: Kind(
+                Tag,
+            ),
         },
     ),
 )

@@ -4,9 +4,11 @@ expression: "start_3d_node_section(\"COORD3D\")"
 ---
 Err(
     Error(
-        Error {
-            input: "COORD3D",
-            code: Tag,
+        Base {
+            location: "COORD3D",
+            kind: Kind(
+                Tag,
+            ),
         },
     ),
 )

@@ -154,6 +154,14 @@ fn poi1_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
     Ok((input, MailValue::Cells(cells)))
 }
 
+fn comment_or_line_ending(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
+  let (input, _) = tuple((
+        opt(preceded(tag("%").context("commentary symbol"), is_not("\n").context("not end of line"))),
+        line_ending)
+  )(input)?;
+  Ok((input, ()))
+}
+
 
 fn parse_single_line_comment(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
   let (input, _) = preceded(tag("%").context("commentary symbol"), is_not("\n").context("not end of line")
@@ -201,14 +209,7 @@ fn mail_parser(input: &str) -> IResult<&str, MailParseOutput, ErrorTree<&str>> {
 }
 
 fn mail_final_parser(input: &str) -> Result<MailParseOutput, ()>{
-
-    let result_clean = clean_comments(input);
-    let input_cleaned: String;
-    match result_clean{
-        Err(e) => return Err(()),
-        Ok((rest, cleaned_input)) => input_cleaned = cleaned_input
-    }
-    final_parser(mail_parser)(&input_cleaned)
+    final_parser(mail_parser)(input)
 }
 
 #[cfg(test)]
@@ -263,20 +264,27 @@ mod tests {
         assert_debug_snapshot!(poi1_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF\n"));
     }
     #[test]
-    fn comment_eraser_should_work() {
-        assert_debug_snapshot!(parse_single_line_comment("%ble\n"));
-        assert_debug_snapshot!(split_on_comment("C%bla\n"));
-        assert_debug_snapshot!(clean_comments( "C%bla\n"));
-        assert_debug_snapshot!(clean_comments("C%bla\nSDD%bla2\n"));
-        assert_debug_snapshot!(clean_comments( "C%bla\n\nN1"));
-        assert_debug_snapshot!(clean_comments( "COOR_3D  %bla\n\nN1"));
+    fn comment_or_lineending_should_work() {
+        assert_debug_snapshot!(comment_or_line_ending("%ble\n"));
+        assert_debug_snapshot!(comment_or_line_ending("% ble &\n"));
+        assert_debug_snapshot!(comment_or_line_ending("ddf % ble &\n"));
     }
+    // #[test]
+    // fn comment_eraser_should_work() {
+    //     assert_debug_snapshot!(parse_single_line_comment("%ble\n"));
+    //     assert_debug_snapshot!(split_on_comment("C%bla\n"));
+    //     assert_debug_snapshot!(clean_comments( "C%bla\n"));
+    //     assert_debug_snapshot!(clean_comments("C%bla\nSDD%bla2\n"));
+    //     assert_debug_snapshot!(clean_comments( "C%bla\n\nN1"));
+    //     assert_debug_snapshot!(clean_comments( "COOR_3D  %bla\n\nN1"));
+    // }
     #[test]
     fn mail_final_parser_should_work() {
         assert_debug_snapshot!(mail_final_parser(
             "COOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"
         ));
         assert_debug_snapshot!(mail_final_parser("COOR_3D  \n\nN1 2  3.0 4\nFINSF\nPOI1\nM1 N1\nFINSF\n\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"));
+        assert_debug_snapshot!(mail_final_parser("COOR_3D %comment \n\n    % another comment\n"));
     }
 
 }

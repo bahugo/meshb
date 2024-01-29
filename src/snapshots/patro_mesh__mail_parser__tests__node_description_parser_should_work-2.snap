@@ -4,9 +4,33 @@ expression: "node_description(\"N12\")"
 ---
 Err(
     Error(
-        Error {
-            input: "",
-            code: Float,
-        },
+        Alt(
+            [
+                Base {
+                    location: "",
+                    kind: Kind(
+                        Float,
+                    ),
+                },
+                Base {
+                    location: "",
+                    kind: Kind(
+                        Float,
+                    ),
+                },
+                Base {
+                    location: "",
+                    kind: Kind(
+                        Float,
+                    ),
+                },
+                Base {
+                    location: "",
+                    kind: Kind(
+                        Float,
+                    ),
+                },
+            ],
+        ),
     ),
 )

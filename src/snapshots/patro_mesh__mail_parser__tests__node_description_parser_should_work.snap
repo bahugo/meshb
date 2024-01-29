@@ -4,9 +4,11 @@ expression: "node_description(\"23\")"
 ---
 Err(
     Error(
-        Error {
-            input: "23",
-            code: Alpha,
+        Base {
+            location: "23",
+            kind: Expected(
+                Alpha,
+            ),
         },
     ),
 )
