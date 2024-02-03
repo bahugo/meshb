@@ -6,8 +6,10 @@ Err(
     Error(
         Base {
             location: "COORD3D",
-            kind: Kind(
-                Tag,
+            kind: Expected(
+                Tag(
+                    "COOR_3D",
+                ),
             ),
         },
     ),

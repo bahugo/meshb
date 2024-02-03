@@ -1,0 +1,17 @@
+---
+source: src/mail_parser.rs
+expression: "group_section(\"GROUP_NO BORD_INT \\n bI1 Bi2\\n FINSF\")"
+---
+Ok(
+    (
+        "",
+        Group {
+            group_type: Node,
+            name: "BORD_INT",
+            elems: [
+                "bI1",
+                "Bi2",
+            ],
+        },
+    ),
+)

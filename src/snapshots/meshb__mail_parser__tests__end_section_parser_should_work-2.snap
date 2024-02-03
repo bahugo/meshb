@@ -6,8 +6,10 @@ Err(
     Error(
         Base {
             location: "TINSF",
-            kind: Kind(
-                Tag,
+            kind: Expected(
+                Tag(
+                    "FINSF",
+                ),
             ),
         },
     ),

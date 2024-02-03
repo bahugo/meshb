@@ -6,8 +6,10 @@ Err(
     Error(
         Base {
             location: "GROUPNO",
-            kind: Kind(
-                Tag,
+            kind: Expected(
+                Tag(
+                    "GROUP_NO",
+                ),
             ),
         },
     ),
