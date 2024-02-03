@@ -1,16 +1,16 @@
 extern crate core;
 
-mod patro_mesh;
-mod patro_mesh_enums;
-mod patro_node;
-mod patro_cell;
+mod mesh;
+mod mesh_enums;
+mod node;
+mod cell;
 mod mail_parser;
 
 pub mod lib{
-    pub use crate::patro_mesh::PatroMesh;
-    pub use crate::patro_mesh_enums::{PatroCellType, PatroMeshFormat};
-    pub use crate::patro_node::PatroNode;
-    pub use crate::patro_cell::{Poi1Cell, Seg2Cell};
+    pub use crate::mesh::Mesh;
+    pub use crate::mesh_enums::{CellType, MeshFormat};
+    pub use crate::node::Node;
+    pub use crate::cell::{Poi1Cell, Seg2Cell};
 }
 
 #[cfg(test)]

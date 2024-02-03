@@ -1,12 +1,12 @@
 use derive_more::{Display};
 
 #[derive(Display)]
-pub enum PatroMeshFormat {
+pub enum MeshFormat {
     Mail,
 }
 
 #[derive(Display)]
-pub enum PatroCellType {
+pub enum CellType {
     POI1,
     SEG2,
     TRIA3,

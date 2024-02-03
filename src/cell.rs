@@ -1,7 +1,7 @@
 use ndarray::Array1;
 
 
-pub trait PatroCell{
+pub trait MeshCell{
     fn get_co(&self) -> Array1<usize>;
     fn new(connectivity: &Array1<usize>) -> Result<Self, &'static str> where Self: Sized;
 }
@@ -11,7 +11,7 @@ pub struct Poi1Cell {
     pub co: Array1<usize>,
 }
 
-impl PatroCell for Poi1Cell {
+impl MeshCell for Poi1Cell {
     fn get_co(&self) -> Array1<usize> {
         self.co.clone()
     }
@@ -32,7 +32,7 @@ pub struct Seg2Cell {
     pub co: Array1<usize>,
 }
 
-impl PatroCell for Seg2Cell {
+impl MeshCell for Seg2Cell {
     fn get_co(&self) -> Array1<usize> {
         self.co.clone()
     }

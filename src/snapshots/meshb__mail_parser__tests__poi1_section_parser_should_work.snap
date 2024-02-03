@@ -1,0 +1,20 @@
+---
+source: src/mail_parser.rs
+expression: "poi1_section(\"POI1  \\n\\nM1 N2   \\nFINSF\\n\")"
+---
+Ok(
+    (
+        "",
+        Cells(
+            [
+                CellProp {
+                    cell_type: POI1,
+                    name: "M1",
+                    nodes: [
+                        "N2",
+                    ],
+                },
+            ],
+        ),
+    ),
+)

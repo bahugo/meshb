@@ -1,0 +1,14 @@
+---
+source: src/mail_parser.rs
+expression: "node_name(\"N\")"
+---
+Err(
+    Error(
+        Base {
+            location: "",
+            kind: Expected(
+                Digit,
+            ),
+        },
+    ),
+)
