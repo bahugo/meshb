@@ -1,0 +1,14 @@
+---
+source: src/mail_parser.rs
+expression: "start_gno_section(\"GROUPNO\")"
+---
+Err(
+    Error(
+        Base {
+            location: "GROUPNO",
+            kind: Kind(
+                Tag,
+            ),
+        },
+    ),
+)

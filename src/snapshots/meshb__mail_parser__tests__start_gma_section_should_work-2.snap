@@ -1,0 +1,14 @@
+---
+source: src/mail_parser.rs
+expression: "start_gma_section(\"GROUPMA\")"
+---
+Err(
+    Error(
+        Base {
+            location: "GROUPMA",
+            kind: Kind(
+                Tag,
+            ),
+        },
+    ),
+)
