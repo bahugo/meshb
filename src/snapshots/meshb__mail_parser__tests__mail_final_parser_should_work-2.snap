@@ -1,6 +1,6 @@
 ---
 source: src/mail_parser.rs
-expression: "mail_final_parser(\"COOR_3D  \\n\\nN1 2  3.0 4\\nFINSF\\nPOI1\\nM1 N1\\nFINSF\\n\\nCOOR_3D  \\nN2 2  3.0 4\\nN3 3  4 4\\nFINSF\")"
+expression: "mail_parser(\"COOR_3D  \\n\\nN1 2  3.0 4\\nFINSF\\nPOI1\\nM1 N1\\nFINSF\\n\\nCOOR_3D  \\nN2 2  3.0 4\\nN3 3  4 4\\nFINSF\")"
 ---
 Ok(
     MailParseOutput {
@@ -33,5 +33,6 @@ Ok(
                 ],
             },
         ],
+        groups: [],
     },
 )

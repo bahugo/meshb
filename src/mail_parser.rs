@@ -42,13 +42,14 @@ pub enum MailValue<'a> {
     Null,
     NodeElts(Vec<Node<'a>>),
     Cells(Vec<CellProp<'a>>),
-    Groups(Vec<Group<'a>>),
+    Group(Group<'a>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MailParseOutput<'a> {
     pub nodes: Vec<Node<'a>>,
     pub cells: Vec<CellProp<'a>>,
+    pub groups: Vec<Group<'a>>,
 }
 
 impl MailParseOutput<'_> {
@@ -56,6 +57,7 @@ impl MailParseOutput<'_> {
         MailParseOutput {
             nodes: vec![],
             cells: vec![],
+            groups: vec![],
         }
     }
 }
@@ -200,7 +202,7 @@ fn group_name(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
     Ok((input, name))
 }
 
-fn group_section(input: &str) -> IResult<&str, Group, ErrorTree<&str>> {
+fn group_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
     let (input, (_, group_type, _, _, _)) = tuple((
         space0,
         alt((start_gno_section, start_gma_section)),
@@ -214,7 +216,7 @@ fn group_section(input: &str) -> IResult<&str, Group, ErrorTree<&str>> {
             multispace0,
             |input| group_description(group_type.clone(), input),
     )(input)?;
-    Ok((input, group))
+    Ok((input, MailValue::Group(group)))
 }
 
 fn comment_or_line_ending(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
@@ -229,7 +231,9 @@ fn comment_or_line_ending(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
 }
 
 fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, ErrorTree<&str>> {
-    let mail_elt_parser = preceded(multispace0, alt((node_3d_section, poi1_section)));
+    let mail_elt_parser = preceded(multispace0,
+        alt((node_3d_section, poi1_section, group_section))
+    );
 
     let (input, output) = fold_many0(
         mail_elt_parser,
@@ -241,6 +245,10 @@ fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, Error
             }
             MailValue::Cells(cells) => {
                 acc.cells.extend(cells);
+                acc
+            }
+            MailValue::Group(group) => {
+                acc.groups.insert(acc.groups.len(), group);
                 acc
             }
             _ => acc,
@@ -346,6 +354,9 @@ mod tests {
         assert_debug_snapshot!(mail_parser("COOR_3D  \n\nN1 2  3.0 4\nFINSF\nPOI1\nM1 N1\nFINSF\n\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"));
         assert_debug_snapshot!(mail_parser(
             "COOR_3D %comment \nN1 2  3.0 4\n    % another comment\nFINSF"
+        ));
+        assert_debug_snapshot!(mail_parser(
+            "COOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF\nGROUP_NO GRP1 N1 N2 \nFINSF\n"
         ));
     }
 }
