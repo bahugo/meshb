@@ -1,0 +1,19 @@
+---
+source: src/mail_parser.rs
+expression: "group_section(\"GROUP_MA BORD_INT \\nbI1 Bi2 \\n FINSF\")"
+---
+Ok(
+    (
+        "",
+        Group(
+            Group {
+                group_type: Cell,
+                name: "BORD_INT",
+                elems: [
+                    "bI1",
+                    "Bi2",
+                ],
+            },
+        ),
+    ),
+)

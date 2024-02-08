@@ -6,7 +6,7 @@ use nom::{
         multispace1, space0,
     },
     combinator::{opt, recognize},
-    multi::{fold_many0, many0, many0_count, many1, many_m_n},
+    multi::{fold_many0, many0, many0_count, many1, many_m_n, separated_list0},
     number::complete::float,
     sequence::{delimited, pair, preceded, tuple},
     IResult,
@@ -137,8 +137,7 @@ fn group_description(group_type: GroupType, input: &str) -> IResult<&str, Group,
         group_name.context("group_name"),
         opt(many0(comment_or_line_ending))
     ))(input)?;
-    let (input, (_, elems_names, _, _, _)) = tuple((
-        space0,
+    let (input, (elems_names, _, _, _)) = tuple((
         many0(preceded(multispace1, node_or_cell_name)).context("elements names"),
         many0(comment_or_line_ending).context("optional space comment or line ending"),
         multispace0,
@@ -172,27 +171,27 @@ fn start_gma_section(input: &str) -> IResult<&str, GroupType, ErrorTree<&str>> {
     Ok((input, GroupType::Cell))
 }
 
+
+
 fn node_3d_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
-    let (input, (_, _, nodes, _, _, _)) = tuple((
+    let (input, (_, _, nodes, _, _)) = tuple((
         tuple((space0, start_3d_node_section, space0)),
         many1(comment_or_line_ending),
         many0(preceded(multispace0, node_description)),
         many0(comment_or_line_ending),
         end_section_tag,
-        many0(comment_or_line_ending),
     ))(input)?;
     Ok((input, MailValue::NodeElts(nodes)))
 }
 
 fn poi1_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
-    let (input, (_, cells, _, _, _)) = tuple((
+    let (input, (_, cells, _, _)) = tuple((
         tuple((space0, tag("POI1"), space0)),
         many0(preceded(multispace0, |input| {
             cell_description(CellType::POI1, input)
         })),
         many0(comment_or_line_ending),
         end_section_tag,
-        many0(comment_or_line_ending),
     ))(input)?;
     Ok((input, MailValue::Cells(cells)))
 }
@@ -230,31 +229,35 @@ fn comment_or_line_ending(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
     Ok((input, ()))
 }
 
-fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, ErrorTree<&str>> {
-    let mail_elt_parser = preceded(multispace0,
-        alt((node_3d_section, poi1_section, group_section))
-    );
+fn useless_line(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
+    let (input, _) = preceded(space0, comment_or_line_ending)(input)?;
+    Ok((input, ()))
+}
 
-    let (input, output) = fold_many0(
-        mail_elt_parser,
-        MailParseOutput::new,
+fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, ErrorTree<&str>> {
+    let (input, parsed) = separated_list0(many1(useless_line),
+        alt((node_3d_section, poi1_section, group_section))
+            )(input)?;
+
+    let output = parsed.iter()
+        .fold(
+        MailParseOutput::new(),
         |mut acc: MailParseOutput, item| match item {
             MailValue::NodeElts(nodes) => {
-                acc.nodes.extend(nodes);
+                acc.nodes.extend(nodes.to_owned());
                 acc
             }
             MailValue::Cells(cells) => {
-                acc.cells.extend(cells);
+                acc.cells.extend(cells.to_owned());
                 acc
             }
             MailValue::Group(group) => {
-                acc.groups.insert(acc.groups.len(), group);
+                acc.groups.insert(acc.groups.len(), group.to_owned());
                 acc
             }
             _ => acc,
-        },
-    )(input)?;
-
+        }
+        );
     Ok((input, output))
 }
 
@@ -292,11 +295,13 @@ mod tests {
         assert_debug_snapshot!(node_3d_coords(" 1,2  23.3 233"));
         assert_debug_snapshot!(node_3d_coords("   1\n  2 3 "));
     }
+
     #[test]
     fn end_section_parser_should_work() {
         assert_debug_snapshot!(end_section_tag("FINSF"));
         assert_debug_snapshot!(end_section_tag("TINSF"));
     }
+
     #[test]
     fn start_node_section_parser_should_work() {
         assert_debug_snapshot!(start_3d_node_section("COOR_3D"));
@@ -304,14 +309,14 @@ mod tests {
     }
     #[test]
     fn node_3d_section_parser_should_work() {
-        assert_debug_snapshot!(node_3d_section("COOR_3D  \n\nN1 2  3.0 4\nFINSF\n"));
-        assert_debug_snapshot!(node_3d_section("COOR_3D\nN1 2  3.0 4\nN2 3  4 4\nFINSF\n"));
+        assert_debug_snapshot!(node_3d_section("COOR_3D  \n\nN1 2  3.0 4\nFINSF"));
+        assert_debug_snapshot!(node_3d_section("COOR_3D\nN1 2  3.0 4\nN2 3  4 4\nFINSF"));
     }
     #[test]
     fn poi1_section_parser_should_work() {
-        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 N2   \nFINSF\n"));
-        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF\n"));
-        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF\n"));
+        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 N2   \nFINSF"));
+        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF"));
+        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF"));
     }
     #[test]
     fn group_name_should_work() {
@@ -339,13 +344,26 @@ mod tests {
         assert_debug_snapshot!(group_section("GROUP_NO BORD_INT \n bI1 Bi2\n FINSF"));
         assert_debug_snapshot!(group_section("GROUP_MA nom = BORD_INT \n bI1 Bi2\n FINSF"));
         assert_debug_snapshot!(group_section("GROUP_MA BORD_INT \n bI1 Bi2\n FINSF"));
+        assert_debug_snapshot!(group_section("GROUP_MA BORD_INT \nbI1 Bi2 \n FINSF"));
+        assert_debug_snapshot!(group_section("GROUP_MA \nBORD_INT bI1 Bi2 \n FINSF"));
     }
+
     #[test]
     fn comment_or_lineending_should_work() {
         assert_debug_snapshot!(comment_or_line_ending("%ble\n"));
         assert_debug_snapshot!(comment_or_line_ending("% ble &\n"));
         assert_debug_snapshot!(comment_or_line_ending("ddf % ble &\n"));
     }
+
+    #[test]
+    fn useless_line_should_work() {
+        assert_debug_snapshot!(useless_line(" \t%ble\n"));
+        assert_debug_snapshot!(useless_line(" \t  \n"));
+        assert_debug_snapshot!(useless_line("\n"));
+        assert_debug_snapshot!(useless_line(" \n"));
+        assert_debug_snapshot!(useless_line(" % ble\n"));
+    }
+
     #[test]
     fn mail_final_parser_should_work() {
         assert_debug_snapshot!(mail_parser(
@@ -356,7 +374,10 @@ mod tests {
             "COOR_3D %comment \nN1 2  3.0 4\n    % another comment\nFINSF"
         ));
         assert_debug_snapshot!(mail_parser(
-            "COOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF\nGROUP_NO GRP1 N1 N2 \nFINSF\n"
+            "COOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF\nGROUP_NO GRP1 N1 N2 \nFINSF \n"
+        ));
+        assert_debug_snapshot!(mail_parser(
+            "\nCOOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"
         ));
     }
 }

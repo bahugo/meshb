@@ -1,0 +1,10 @@
+---
+source: src/mail_parser.rs
+expression: "useless_line(\" % ble\\n\")"
+---
+Ok(
+    (
+        "",
+        (),
+    ),
+)
