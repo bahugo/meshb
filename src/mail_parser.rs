@@ -385,5 +385,8 @@ mod tests {
         assert_debug_snapshot!(mail_parser(
             "\nCOOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"
         ));
+        assert_debug_snapshot!(mail_parser(
+            " \n %comment\nCOOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF \n %comment\n \n"
+        ));
     }
 }
