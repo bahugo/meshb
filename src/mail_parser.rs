@@ -1,12 +1,12 @@
 use nom::{
     branch::alt,
-    bytes::complete::{is_not, take_until},
+    bytes::complete::is_not,
     character::complete::{
-        alpha0, alpha1, alphanumeric1, anychar, char, digit0, digit1, line_ending, multispace0,
+        alpha1, alphanumeric1, digit1, line_ending, multispace0,
         multispace1, space0,
     },
     combinator::{opt, recognize},
-    multi::{fold_many0, many0, many0_count, many1, many_m_n, separated_list0},
+    multi::{many0, many1, many_m_n, separated_list0},
     number::complete::float,
     sequence::{delimited, pair, preceded, tuple},
     IResult,
@@ -18,71 +18,10 @@ use nom_supreme::{
     tag::complete::{tag, tag_no_case},
 };
 
-//  COOR_3D
-//  N1        1.00000000000000E+00  4.00000000000000E+00  2.50000000000000E+00
-//  N2        2.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
-//  N3        3.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
-//  N4        4.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
-// FINSF
-//
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum CellType {
-    POI1,
-    SEG2,
-}
-#[derive(Debug, Clone, PartialEq)]
-pub enum GroupType {
-    Node,
-    Cell,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum MailValue<'a> {
-    Null,
-    NodeElts(Vec<Node<'a>>),
-    Cells(Vec<CellProp<'a>>),
-    Group(Group<'a>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct MailParseOutput<'a> {
-    pub nodes: Vec<Node<'a>>,
-    pub cells: Vec<CellProp<'a>>,
-    pub groups: Vec<Group<'a>>,
-}
-
-impl MailParseOutput<'_> {
-    fn new() -> Self {
-        MailParseOutput {
-            nodes: vec![],
-            cells: vec![],
-            groups: vec![],
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Node<'a> {
-    pub name: &'a str,
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct CellProp<'a> {
-    pub cell_type: CellType,
-    pub name: &'a str,
-    pub nodes: Vec<&'a str>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Group<'a> {
-    pub group_type: GroupType,
-    pub name: &'a str,
-    pub elems: Vec<&'a str>,
-}
+use crate::{
+    lib::CellType,
+    parsers::tokens::{NodeProp, CellProp, Group, GroupType, MailValue, MailParseOutput},
+};
 
 fn node_or_cell_name(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
     let (input, name) = recognize(pair(alpha1, digit1))(input)?;
@@ -103,7 +42,7 @@ fn node_3d_coords(input: &str) -> IResult<&str, [f32; 3], ErrorTree<&str>> {
     Ok((input, [x, y, z]))
 }
 
-fn node_description(input: &str) -> IResult<&str, Node, ErrorTree<&str>> {
+fn node_description(input: &str) -> IResult<&str, NodeProp, ErrorTree<&str>> {
     let (input, (_, name, _, [x, y, z], _)) = tuple((
         space0,
         node_or_cell_name,
@@ -111,14 +50,11 @@ fn node_description(input: &str) -> IResult<&str, Node, ErrorTree<&str>> {
         node_3d_coords,
         multispace0,
     ))(input)?;
-    Ok((input, Node { name, x, y, z }))
+    Ok((input, NodeProp { name, x, y, z }))
 }
 
 fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp, ErrorTree<&str>> {
-    let nb_nodes: usize = match cell_type {
-        CellType::POI1 => 1,
-        CellType::SEG2 => 2,
-    };
+    let nb_nodes: usize = cell_type.get_nb_of_connectivities();
     let (input, (name, node_names, _)) = tuple((
         node_or_cell_name,
         many_m_n(nb_nodes, nb_nodes, preceded(multispace1, node_or_cell_name)),
@@ -176,6 +112,12 @@ fn start_gma_section(input: &str) -> IResult<&str, GroupType, ErrorTree<&str>> {
     Ok((input, GroupType::Cell))
 }
 
+//  COOR_3D
+//  N1        1.00000000000000E+00  4.00000000000000E+00  2.50000000000000E+00
+//  N2        2.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
+//  N3        3.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
+//  N4        4.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
+// FINSF
 fn node_3d_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
     let (input, (_, _, nodes, _, _)) = tuple((
         tuple((space0, start_3d_node_section, space0)),
@@ -187,11 +129,43 @@ fn node_3d_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
     Ok((input, MailValue::NodeElts(nodes)))
 }
 
-fn poi1_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
-    let (input, (_, cells, _, _)) = tuple((
-        tuple((space0, tag("POI1"), space0)),
+fn cell_type_tag(input: &str) -> IResult<&str, CellType, ErrorTree<&str>> {
+    let (input, cell_type_str) = alt((
+        tag("POI1"),
+        tag("SEG2"),
+        tag("SEG3"),
+        tag("SEG4"),
+        tag("TRIA3"),
+        tag("TRIA6"),
+        tag("TRIA7"),
+        tag("QUAD4"),
+        tag("QUAD8"),
+        tag("QUAD9"),
+        tag("HEXA8"),
+        tag("HEXA20"),
+        tag("HEXA27"),
+        tag("PENTA6"),
+        tag("PENTA15"),
+        tag("PENTA18"),
+        tag("TETRA4"),
+        tag("TETRA10"),
+        tag("PYRAM5"),
+        tag("PYRAM13"),
+    ))(input)?;
+    let cell_type_resu = CellType::from_string(cell_type_str);
+    if let Ok(cell_type) = cell_type_resu {
+        return Ok((input, cell_type));
+    }
+    else {
+        panic!("{} not implemented", cell_type_str);
+    }
+}
+
+fn cell_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
+    let (input, (_, cell_type, _)) = tuple((space0, cell_type_tag, space0))(input)?;
+    let (input, (cells, _, _)) = tuple((
         many0(preceded(multispace0, |input| {
-            cell_description(CellType::POI1, input)
+            cell_description(cell_type.clone(), input)
         })),
         many0(comment_or_line_ending),
         end_section_tag,
@@ -240,7 +214,7 @@ fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, Error
         many0(useless_line),
         separated_list0(
             many1(useless_line),
-            alt((node_3d_section, poi1_section, group_section)),
+            alt((node_3d_section, cell_section, group_section)),
         ),
         many0(useless_line),
     )(input)?;
@@ -318,11 +292,38 @@ mod tests {
         assert_debug_snapshot!(node_3d_section("COOR_3D  \n\nN1 2  3.0 4\nFINSF"));
         assert_debug_snapshot!(node_3d_section("COOR_3D\nN1 2  3.0 4\nN2 3  4 4\nFINSF"));
     }
+
     #[test]
-    fn poi1_section_parser_should_work() {
-        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 N2   \nFINSF"));
-        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF"));
-        assert_debug_snapshot!(poi1_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF"));
+    fn cell_type_tag_should_work() {
+        assert_debug_snapshot!(cell_type_tag("POI1"));
+        assert_debug_snapshot!(cell_type_tag("Poi1"));
+        assert_debug_snapshot!(cell_type_tag("SEG2"));
+        assert_debug_snapshot!(cell_type_tag("SEG3"));
+        assert_debug_snapshot!(cell_type_tag("SEG4"));
+        assert_debug_snapshot!(cell_type_tag("TRIA3"));
+        assert_debug_snapshot!(cell_type_tag("TRIA6"));
+        assert_debug_snapshot!(cell_type_tag("TRIA7"));
+        assert_debug_snapshot!(cell_type_tag("QUAD4"));
+        assert_debug_snapshot!(cell_type_tag("QUAD8"));
+        assert_debug_snapshot!(cell_type_tag("QUAD9"));
+        assert_debug_snapshot!(cell_type_tag("HEXA8"));
+        assert_debug_snapshot!(cell_type_tag("HEXA20"));
+        assert_debug_snapshot!(cell_type_tag("HEXA27"));
+        assert_debug_snapshot!(cell_type_tag("PENTA6"));
+        assert_debug_snapshot!(cell_type_tag("PENTA15"));
+        assert_debug_snapshot!(cell_type_tag("PENTA18"));
+        assert_debug_snapshot!(cell_type_tag("TETRA4"));
+        assert_debug_snapshot!(cell_type_tag("TETRA10"));
+        assert_debug_snapshot!(cell_type_tag("PYRAM5"));
+        assert_debug_snapshot!(cell_type_tag("PYRAM13"));
+    }
+
+    #[test]
+    fn cell_section_parser_should_work() {
+        assert_debug_snapshot!(cell_section("POI1  \n\nM1 N2   \nFINSF"));
+        assert_debug_snapshot!(cell_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF"));
+        assert_debug_snapshot!(cell_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF"));
+        assert_debug_snapshot!(cell_section("SEG2\nM1 N1 N2\nFINSF"));
     }
     #[test]
     fn group_name_should_work() {

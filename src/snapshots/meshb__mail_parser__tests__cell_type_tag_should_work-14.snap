@@ -1,0 +1,10 @@
+---
+source: src/mail_parser.rs
+expression: "cell_type_tag(\"HEXA27\")"
+---
+Ok(
+    (
+        "",
+        HEXA27,
+    ),
+)

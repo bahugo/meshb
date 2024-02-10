@@ -115,21 +115,24 @@ impl Mesh {
         match ty {
             CellType::POI1 => self.add_cells_of_type::<Poi1Cell>(connectivities),
             CellType::SEG2 => self.add_cells_of_type::<Seg2Cell>(connectivities),
-            CellType::TRIA3 => {
-                unimplemented!()
-            }
-            CellType::QUAD4 => {
-                unimplemented!()
-            }
-            CellType::PENTA6 => {
-                unimplemented!()
-            }
-            CellType::PYRAM5 => {
-                unimplemented!()
-            }
-            CellType::HEXA8 => {
-                unimplemented!()
-            }
+            CellType::TRIA3 => { unimplemented!() }
+            CellType::QUAD4 => { unimplemented!() }
+            CellType::PENTA6 => { unimplemented!() }
+            CellType::PYRAM5 => { unimplemented!() }
+            CellType::HEXA8 => { unimplemented!() }
+            CellType::SEG3 => todo!(),
+            CellType::SEG4 => todo!(),
+            CellType::TRIA6 => todo!(),
+            CellType::TRIA7 => todo!(),
+            CellType::QUAD8 => todo!(),
+            CellType::QUAD9 => todo!(),
+            CellType::HEXA20 => todo!(),
+            CellType::HEXA27 => todo!(),
+            CellType::PENTA15 => todo!(),
+            CellType::PENTA18 => todo!(),
+            CellType::TETRA4 => todo!(),
+            CellType::TETRA10 => todo!(),
+            CellType::PYRAM13 => todo!(),
         }
     }
 
@@ -203,21 +206,24 @@ impl Mesh {
         match ty {
             CellType::POI1 => val = Self::extract_cell_result(Poi1Cell::new(connectivity)),
             CellType::SEG2 => val = Self::extract_cell_result(Seg2Cell::new(connectivity)),
-            CellType::TRIA3 => {
-                unimplemented!();
-            }
-            CellType::QUAD4 => {
-                unimplemented!()
-            }
-            CellType::PENTA6 => {
-                unimplemented!()
-            }
-            CellType::PYRAM5 => {
-                unimplemented!()
-            }
-            CellType::HEXA8 => {
-                unimplemented!()
-            }
+            CellType::TRIA3 => { unimplemented!(); }
+            CellType::QUAD4 => { unimplemented!() }
+            CellType::PENTA6 => { unimplemented!() }
+            CellType::PYRAM5 => { unimplemented!() }
+            CellType::HEXA8 => { unimplemented!() }
+            CellType::SEG3 => todo!(),
+            CellType::SEG4 => todo!(),
+            CellType::TRIA6 => todo!(),
+            CellType::TRIA7 => todo!(),
+            CellType::QUAD8 => todo!(),
+            CellType::QUAD9 => todo!(),
+            CellType::HEXA20 => todo!(),
+            CellType::HEXA27 => todo!(),
+            CellType::PENTA15 => todo!(),
+            CellType::PENTA18 => todo!(),
+            CellType::TETRA4 => todo!(),
+            CellType::TETRA10 => todo!(),
+            CellType::PYRAM13 => todo!(),
         }
         match val {
             Ok(ok_val) => {

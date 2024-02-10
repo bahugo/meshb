@@ -1,0 +1,10 @@
+---
+source: src/mail_parser.rs
+expression: "cell_type_tag(\"QUAD9\")"
+---
+Ok(
+    (
+        "",
+        QUAD9,
+    ),
+)

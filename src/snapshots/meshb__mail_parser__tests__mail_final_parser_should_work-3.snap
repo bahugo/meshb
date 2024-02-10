@@ -5,7 +5,7 @@ expression: "mail_parser(\"COOR_3D %comment \\nN1 2  3.0 4\\n    % another comme
 Ok(
     MailParseOutput {
         nodes: [
-            Node {
+            NodeProp {
                 name: "N1",
                 x: 2.0,
                 y: 3.0,

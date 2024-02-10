@@ -5,6 +5,7 @@ mod mesh_enums;
 mod node;
 mod cell;
 mod mail_parser;
+mod parsers;
 
 pub mod lib{
     pub use crate::mesh::Mesh;

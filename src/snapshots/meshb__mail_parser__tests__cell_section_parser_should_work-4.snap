@@ -1,0 +1,21 @@
+---
+source: src/mail_parser.rs
+expression: "cell_section(\"SEG2\\nM1 N1 N2\\nFINSF\")"
+---
+Ok(
+    (
+        "",
+        Cells(
+            [
+                CellProp {
+                    cell_type: SEG2,
+                    name: "M1",
+                    nodes: [
+                        "N1",
+                        "N2",
+                    ],
+                },
+            ],
+        ),
+    ),
+)

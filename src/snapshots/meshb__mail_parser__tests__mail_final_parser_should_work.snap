@@ -5,19 +5,19 @@ expression: "mail_parser(\"COOR_3D  \\n\\nN1 2  3.0 4\\nFINSF\\nCOOR_3D  \\nN2 2
 Ok(
     MailParseOutput {
         nodes: [
-            Node {
+            NodeProp {
                 name: "N1",
                 x: 2.0,
                 y: 3.0,
                 z: 4.0,
             },
-            Node {
+            NodeProp {
                 name: "N2",
                 x: 2.0,
                 y: 3.0,
                 z: 4.0,
             },
-            Node {
+            NodeProp {
                 name: "N3",
                 x: 3.0,
                 y: 4.0,
