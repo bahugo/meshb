@@ -104,8 +104,13 @@ fn node_3d_coords(input: &str) -> IResult<&str, [f32; 3], ErrorTree<&str>> {
 }
 
 fn node_description(input: &str) -> IResult<&str, Node, ErrorTree<&str>> {
-    let (input, (_, name, _, [x, y, z], _)) =
-        tuple((space0, node_or_cell_name, space0, node_3d_coords, multispace0))(input)?;
+    let (input, (_, name, _, [x, y, z], _)) = tuple((
+        space0,
+        node_or_cell_name,
+        space0,
+        node_3d_coords,
+        multispace0,
+    ))(input)?;
     Ok((input, Node { name, x, y, z }))
 }
 
@@ -135,13 +140,13 @@ fn group_description(group_type: GroupType, input: &str) -> IResult<&str, Group,
         opt(tuple((tag_no_case("NOM"), space0, tag("=")))).context("optional NOM ="),
         space0,
         group_name.context("group_name"),
-        opt(many0(comment_or_line_ending))
+        opt(many0(comment_or_line_ending)),
     ))(input)?;
     let (input, (elems_names, _, _, _)) = tuple((
         many0(preceded(multispace1, node_or_cell_name)).context("elements names"),
         many0(comment_or_line_ending).context("optional space comment or line ending"),
         multispace0,
-        end_section_tag
+        end_section_tag,
     ))(input)?;
     Ok((
         input,
@@ -170,8 +175,6 @@ fn start_gma_section(input: &str) -> IResult<&str, GroupType, ErrorTree<&str>> {
     let (input, _) = tag("GROUP_MA")(input)?;
     Ok((input, GroupType::Cell))
 }
-
-
 
 fn node_3d_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
     let (input, (_, _, nodes, _, _)) = tuple((
@@ -210,11 +213,9 @@ fn group_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
         multispace0,
     ))(input)?;
 
-    let (input, group, ) =
-        preceded(
-            multispace0,
-            |input| group_description(group_type.clone(), input),
-    )(input)?;
+    let (input, group) = preceded(multispace0, |input| {
+        group_description(group_type.clone(), input)
+    })(input)?;
     Ok((input, MailValue::Group(group)))
 }
 
@@ -235,28 +236,33 @@ fn useless_line(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
 }
 
 fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, ErrorTree<&str>> {
-    let (input, parsed) = separated_list0(many1(useless_line),
-        alt((node_3d_section, poi1_section, group_section))
-            )(input)?;
+    let (input, parsed) = delimited(
+        many0(useless_line),
+        separated_list0(
+            many1(useless_line),
+            alt((node_3d_section, poi1_section, group_section)),
+        ),
+        many0(useless_line),
+    )(input)?;
 
-    let output = parsed.iter()
-        .fold(
-        MailParseOutput::new(),
-        |mut acc: MailParseOutput, item| match item {
-            MailValue::NodeElts(nodes) => {
-                acc.nodes.extend(nodes.to_owned());
-                acc
-            }
-            MailValue::Cells(cells) => {
-                acc.cells.extend(cells.to_owned());
-                acc
-            }
-            MailValue::Group(group) => {
-                acc.groups.insert(acc.groups.len(), group.to_owned());
-                acc
-            }
-            _ => acc,
-        }
+    let output =
+        parsed.iter().fold(
+            MailParseOutput::new(),
+            |mut acc: MailParseOutput, item| match item {
+                MailValue::NodeElts(nodes) => {
+                    acc.nodes.extend(nodes.to_owned());
+                    acc
+                }
+                MailValue::Cells(cells) => {
+                    acc.cells.extend(cells.to_owned());
+                    acc
+                }
+                MailValue::Group(group) => {
+                    acc.groups.insert(acc.groups.len(), group.to_owned());
+                    acc
+                }
+                _ => acc,
+            },
         );
     Ok((input, output))
 }
