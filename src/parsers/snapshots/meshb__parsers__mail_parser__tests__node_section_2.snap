@@ -1,0 +1,25 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "node_3d_section(\"COOR_3D\\nN1 2  3.0 4\\nN2 3  4 4\\nFINSF\")"
+---
+Ok(
+    (
+        "",
+        NodeElts(
+            [
+                NodeProp {
+                    name: "N1",
+                    x: 2.0,
+                    y: 3.0,
+                    z: 4.0,
+                },
+                NodeProp {
+                    name: "N2",
+                    x: 3.0,
+                    y: 4.0,
+                    z: 4.0,
+                },
+            ],
+        ),
+    ),
+)

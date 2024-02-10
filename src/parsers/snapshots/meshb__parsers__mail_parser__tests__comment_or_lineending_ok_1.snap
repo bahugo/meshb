@@ -1,0 +1,10 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "comment_or_line_ending(\"%ble\\n\")"
+---
+Ok(
+    (
+        "",
+        (),
+    ),
+)

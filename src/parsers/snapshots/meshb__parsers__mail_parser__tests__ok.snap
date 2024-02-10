@@ -1,0 +1,15 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "node_description(\"N12 1.2  23.3 233\\n\")"
+---
+Ok(
+    (
+        "",
+        NodeProp {
+            name: "N12",
+            x: 1.2,
+            y: 23.3,
+            z: 233.0,
+        },
+    ),
+)

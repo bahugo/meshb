@@ -1,0 +1,10 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "start_gno_section(\"GROUP_NO\")"
+---
+Ok(
+    (
+        "",
+        Node,
+    ),
+)

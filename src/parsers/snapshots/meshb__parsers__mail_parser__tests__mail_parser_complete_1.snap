@@ -1,0 +1,94 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "mail_parser(\"COOR_3D\\nN1 2 3.0 4\\nN2 2 3.0 4\\nN3 3 4 4\\nFINSF\\nPOI1\\nM1 N1\\nM2 N2\\nFINSF\\nSEG2\\nM3 N1 N2\\nM4 N1 N3\\nFINSF\\nGROUP_NO GRP1 N1 N2\\nFINSF\\nGROUP_NO\\nGRP2 N1 N3\\nFINSF\\nGROUP_MA GRP3 M1 M2\\nFINSF\\nGROUP_MA\\nGRP4 M1 M3\\nFINSF \\n\")"
+---
+Ok(
+    MailParseOutput {
+        nodes: [
+            NodeProp {
+                name: "N1",
+                x: 2.0,
+                y: 3.0,
+                z: 4.0,
+            },
+            NodeProp {
+                name: "N2",
+                x: 2.0,
+                y: 3.0,
+                z: 4.0,
+            },
+            NodeProp {
+                name: "N3",
+                x: 3.0,
+                y: 4.0,
+                z: 4.0,
+            },
+        ],
+        cells: [
+            CellProp {
+                cell_type: POI1,
+                name: "M1",
+                nodes: [
+                    "N1",
+                ],
+            },
+            CellProp {
+                cell_type: POI1,
+                name: "M2",
+                nodes: [
+                    "N2",
+                ],
+            },
+            CellProp {
+                cell_type: SEG2,
+                name: "M3",
+                nodes: [
+                    "N1",
+                    "N2",
+                ],
+            },
+            CellProp {
+                cell_type: SEG2,
+                name: "M4",
+                nodes: [
+                    "N1",
+                    "N3",
+                ],
+            },
+        ],
+        groups: [
+            Group {
+                group_type: Node,
+                name: "GRP1",
+                elems: [
+                    "N1",
+                    "N2",
+                ],
+            },
+            Group {
+                group_type: Node,
+                name: "GRP2",
+                elems: [
+                    "N1",
+                    "N3",
+                ],
+            },
+            Group {
+                group_type: Cell,
+                name: "GRP3",
+                elems: [
+                    "M1",
+                    "M2",
+                ],
+            },
+            Group {
+                group_type: Cell,
+                name: "GRP4",
+                elems: [
+                    "M1",
+                    "M3",
+                ],
+            },
+        ],
+    },
+)

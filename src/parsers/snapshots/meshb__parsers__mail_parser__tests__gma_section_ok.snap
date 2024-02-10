@@ -1,0 +1,10 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "start_gma_section(\"GROUP_MA\")"
+---
+Ok(
+    (
+        "",
+        Cell,
+    ),
+)

@@ -1,0 +1,10 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "group_name(\"aa1a_Aaaa\")"
+---
+Ok(
+    (
+        "",
+        "aa1a_Aaaa",
+    ),
+)

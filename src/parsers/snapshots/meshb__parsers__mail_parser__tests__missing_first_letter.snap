@@ -1,0 +1,14 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "node_description(\"23\")"
+---
+Err(
+    Error(
+        Base {
+            location: "23",
+            kind: Expected(
+                Alpha,
+            ),
+        },
+    ),
+)

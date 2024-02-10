@@ -1,0 +1,10 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "end_section_tag(\"FINSF\")"
+---
+Ok(
+    (
+        "",
+        "FINSF",
+    ),
+)

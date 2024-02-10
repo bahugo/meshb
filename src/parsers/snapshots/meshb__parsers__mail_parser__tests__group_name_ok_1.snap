@@ -1,0 +1,10 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "group_name(\"GOP1\")"
+---
+Ok(
+    (
+        "",
+        "GOP1",
+    ),
+)

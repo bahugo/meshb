@@ -2,8 +2,7 @@ use nom::{
     branch::alt,
     bytes::complete::is_not,
     character::complete::{
-        alpha1, alphanumeric1, digit1, line_ending, multispace0,
-        multispace1, space0,
+        alpha1, alphanumeric1, digit1, line_ending, multispace0, multispace1, space0, space1,
     },
     combinator::{opt, recognize},
     multi::{many0, many1, many_m_n, separated_list0},
@@ -20,7 +19,7 @@ use nom_supreme::{
 
 use crate::{
     lib::CellType,
-    parsers::tokens::{NodeProp, CellProp, Group, GroupType, MailValue, MailParseOutput},
+    parsers::tokens::{CellProp, Group, GroupType, MailParseOutput, MailValue, NodeProp},
 };
 
 fn node_or_cell_name(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
@@ -76,10 +75,10 @@ fn group_description(group_type: GroupType, input: &str) -> IResult<&str, Group,
         opt(tuple((tag_no_case("NOM"), space0, tag("=")))).context("optional NOM ="),
         space0,
         group_name.context("group_name"),
-        opt(many0(comment_or_line_ending)),
+        many1(alt((space1, recognize(comment_or_line_ending)))),
     ))(input)?;
     let (input, (elems_names, _, _, _)) = tuple((
-        many0(preceded(multispace1, node_or_cell_name)).context("elements names"),
+        separated_list0(space1, node_or_cell_name).context("elements names"),
         many0(comment_or_line_ending).context("optional space comment or line ending"),
         multispace0,
         end_section_tag,
@@ -155,8 +154,7 @@ fn cell_type_tag(input: &str) -> IResult<&str, CellType, ErrorTree<&str>> {
     let cell_type_resu = CellType::from_string(cell_type_str);
     if let Ok(cell_type) = cell_type_resu {
         return Ok((input, cell_type));
-    }
-    else {
+    } else {
         panic!("{} not implemented", cell_type_str);
     }
 }
@@ -253,141 +251,155 @@ mod tests {
 
     #[test]
     fn node_description_parser_should_work() {
-        assert_debug_snapshot!(node_description("23"));
-        assert_debug_snapshot!(node_description("N12"));
-        assert_debug_snapshot!(node_description("N12 1.2  23.3 233\n"));
-        assert_debug_snapshot!(node_description("  N12 1.2  23.3 233\n"));
+        assert_debug_snapshot!("node_descr_missing_first_letter", node_description("23"));
+        assert_debug_snapshot!("node_descr_missing_coords", node_description("N12"));
+        assert_debug_snapshot!("node_descr_ok", node_description("N12 1.2  23.3 233\n"));
+        assert_debug_snapshot!(
+            "node_descr_ok_with_extra_space",
+            node_description("  N12 1.2  23.3 233\n")
+        );
     }
 
     #[test]
     fn node_name_parser_should_work() {
-        assert_debug_snapshot!(node_or_cell_name("23"));
-        assert_debug_snapshot!(node_or_cell_name("N"));
-        assert_debug_snapshot!(node_or_cell_name("N12"));
-        assert_debug_snapshot!(node_or_cell_name("MD12"));
+        assert_debug_snapshot!("node_name_missing_first_letter", node_or_cell_name("23"));
+        assert_debug_snapshot!("node_name_missing_digits", node_or_cell_name("N"));
+        assert_debug_snapshot!("node_name_ok_1", node_or_cell_name("N12"));
+        assert_debug_snapshot!("node_name_ok_2", node_or_cell_name("MD12"));
     }
     #[test]
     fn should_parse_node_3d_coords() {
-        assert_debug_snapshot!(node_3d_coords("1 2 3"));
-        assert_debug_snapshot!(node_3d_coords("   1  2 3 "));
-        assert_debug_snapshot!(node_3d_coords("   1.0  2 3.01 "));
-        assert_debug_snapshot!(node_3d_coords("   1.0e1  2E+1 3.01E+00 "));
-        assert_debug_snapshot!(node_3d_coords(" 1,2  23.3 233"));
-        assert_debug_snapshot!(node_3d_coords("   1\n  2 3 "));
+        assert_debug_snapshot!("node_3d_coords_ok_1", node_3d_coords("1 2 3"));
+        assert_debug_snapshot!("node_3d_coords_ok_2", node_3d_coords("   1  2 3 "));
+        assert_debug_snapshot!("node_3d_coords_ok_3", node_3d_coords("   1.0  2 3.01 "));
+        assert_debug_snapshot!(
+            "node_3d_coords_ok_4",
+            node_3d_coords("   1.0e1  2E+1 3.01E+00 ")
+        );
+        assert_debug_snapshot!(
+            "node_3d_coords_nook_period",
+            node_3d_coords(" 1,2  23.3 233")
+        );
+        assert_debug_snapshot!("node_3d_coords_ok_5", node_3d_coords("   1\n  2 3 "));
     }
 
     #[test]
     fn end_section_parser_should_work() {
-        assert_debug_snapshot!(end_section_tag("FINSF"));
-        assert_debug_snapshot!(end_section_tag("TINSF"));
+        assert_debug_snapshot!("end_section_ok", end_section_tag("FINSF"));
+        assert_debug_snapshot!("end_section_nook", end_section_tag("TINSF"));
     }
 
     #[test]
     fn start_node_section_parser_should_work() {
-        assert_debug_snapshot!(start_3d_node_section("COOR_3D"));
-        assert_debug_snapshot!(start_3d_node_section("COORD3D"));
+        assert_debug_snapshot!("start_section_ok", start_3d_node_section("COOR_3D"));
+        assert_debug_snapshot!("start_section_nook", start_3d_node_section("COORD3D"));
     }
     #[test]
     fn node_3d_section_parser_should_work() {
-        assert_debug_snapshot!(node_3d_section("COOR_3D  \n\nN1 2  3.0 4\nFINSF"));
-        assert_debug_snapshot!(node_3d_section("COOR_3D\nN1 2  3.0 4\nN2 3  4 4\nFINSF"));
+        assert_debug_snapshot!("node_section_1", node_3d_section("COOR_3D  \n\nN1 2  3.0 4\nFINSF"));
+        assert_debug_snapshot!("node_section_2", node_3d_section("COOR_3D\nN1 2  3.0 4\nN2 3  4 4\nFINSF"));
     }
 
     #[test]
     fn cell_type_tag_should_work() {
-        assert_debug_snapshot!(cell_type_tag("POI1"));
-        assert_debug_snapshot!(cell_type_tag("Poi1"));
-        assert_debug_snapshot!(cell_type_tag("SEG2"));
-        assert_debug_snapshot!(cell_type_tag("SEG3"));
-        assert_debug_snapshot!(cell_type_tag("SEG4"));
-        assert_debug_snapshot!(cell_type_tag("TRIA3"));
-        assert_debug_snapshot!(cell_type_tag("TRIA6"));
-        assert_debug_snapshot!(cell_type_tag("TRIA7"));
-        assert_debug_snapshot!(cell_type_tag("QUAD4"));
-        assert_debug_snapshot!(cell_type_tag("QUAD8"));
-        assert_debug_snapshot!(cell_type_tag("QUAD9"));
-        assert_debug_snapshot!(cell_type_tag("HEXA8"));
-        assert_debug_snapshot!(cell_type_tag("HEXA20"));
-        assert_debug_snapshot!(cell_type_tag("HEXA27"));
-        assert_debug_snapshot!(cell_type_tag("PENTA6"));
-        assert_debug_snapshot!(cell_type_tag("PENTA15"));
-        assert_debug_snapshot!(cell_type_tag("PENTA18"));
-        assert_debug_snapshot!(cell_type_tag("TETRA4"));
-        assert_debug_snapshot!(cell_type_tag("TETRA10"));
-        assert_debug_snapshot!(cell_type_tag("PYRAM5"));
-        assert_debug_snapshot!(cell_type_tag("PYRAM13"));
+        assert_debug_snapshot!("cell_type_tag_nook_1", cell_type_tag("Poi1"));
+        assert_debug_snapshot!("cell_type_tag_ok_2", cell_type_tag("POI1"));
+        assert_debug_snapshot!("cell_type_tag_ok_3", cell_type_tag("SEG2"));
+        assert_debug_snapshot!("cell_type_tag_ok_4", cell_type_tag("SEG3"));
+        assert_debug_snapshot!("cell_type_tag_ok_5", cell_type_tag("SEG4"));
+        assert_debug_snapshot!("cell_type_tag_ok_6", cell_type_tag("TRIA3"));
+        assert_debug_snapshot!("cell_type_tag_ok_7", cell_type_tag("TRIA6"));
+        assert_debug_snapshot!("cell_type_tag_ok_8", cell_type_tag("TRIA7"));
+        assert_debug_snapshot!("cell_type_tag_ok_9", cell_type_tag("QUAD4"));
+        assert_debug_snapshot!("cell_type_tag_ok_10", cell_type_tag("QUAD8"));
+        assert_debug_snapshot!("cell_type_tag_ok_11", cell_type_tag("QUAD9"));
+        assert_debug_snapshot!("cell_type_tag_ok_12", cell_type_tag("HEXA8"));
+        assert_debug_snapshot!("cell_type_tag_ok_13", cell_type_tag("HEXA20"));
+        assert_debug_snapshot!("cell_type_tag_ok_14", cell_type_tag("HEXA27"));
+        assert_debug_snapshot!("cell_type_tag_ok_15", cell_type_tag("PENTA6"));
+        assert_debug_snapshot!("cell_type_tag_ok_16", cell_type_tag("PENTA15"));
+        assert_debug_snapshot!("cell_type_tag_ok_17", cell_type_tag("PENTA18"));
+        assert_debug_snapshot!("cell_type_tag_ok_18", cell_type_tag("TETRA4"));
+        assert_debug_snapshot!("cell_type_tag_ok_19", cell_type_tag("TETRA10"));
+        assert_debug_snapshot!("cell_type_tag_ok_20", cell_type_tag("PYRAM5"));
+        assert_debug_snapshot!("cell_type_tag_ok_21", cell_type_tag("PYRAM13"));
     }
 
     #[test]
     fn cell_section_parser_should_work() {
-        assert_debug_snapshot!(cell_section("POI1  \n\nM1 N2   \nFINSF"));
-        assert_debug_snapshot!(cell_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF"));
-        assert_debug_snapshot!(cell_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF"));
-        assert_debug_snapshot!(cell_section("SEG2\nM1 N1 N2\nFINSF"));
+        assert_debug_snapshot!("cell_section_poi1_ok_1", cell_section("POI1  \n\nM1 N2   \nFINSF"));
+        assert_debug_snapshot!("cell_section_poi1_ok_2", cell_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF"));
+        assert_debug_snapshot!("cell_section_poi1_ok_3", cell_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF"));
+        assert_debug_snapshot!("cell_section_seg2_ok_1", cell_section("SEG2\nM1 N1 N2\nFINSF"));
     }
     #[test]
     fn group_name_should_work() {
-        assert_debug_snapshot!(group_name("GOP1"));
-        assert_debug_snapshot!(group_name("aaaaaaa"));
-        assert_debug_snapshot!(group_name("aaa_aaaa"));
-        assert_debug_snapshot!(group_name("aa1a_Aaaa"));
-        assert_debug_snapshot!(group_name("-a1a_Aaaa"));
-        assert_debug_snapshot!(group_name("1a_Aaaa"));
-        assert_debug_snapshot!(group_name("GOP2 d"));
+        assert_debug_snapshot!("group_name_ok_1", group_name("GOP1"));
+        assert_debug_snapshot!("group_name_ok_2", group_name("aaaaaaa"));
+        assert_debug_snapshot!("group_name_ok_3", group_name("aaa_aaaa"));
+        assert_debug_snapshot!("group_name_ok_4", group_name("aa1a_Aaaa"));
+        assert_debug_snapshot!("group_name_no_5", group_name("GOP2 d"));
+        assert_debug_snapshot!("group_name_nook_1", group_name("-a1a_Aaaa"));
+        assert_debug_snapshot!("group_name_nook_2", group_name("1a_Aaaa"));
     }
     #[test]
     fn start_gno_section_should_work() {
-        assert_debug_snapshot!(start_gno_section("GROUP_NO"));
-        assert_debug_snapshot!(start_gno_section("GROUPNO"));
+        assert_debug_snapshot!("gno_section_ok", start_gno_section("GROUP_NO"));
+        assert_debug_snapshot!("gno_section_nook", start_gno_section("GROUPNO"));
     }
     #[test]
     fn start_gma_section_should_work() {
-        assert_debug_snapshot!(start_gma_section("GROUP_MA"));
-        assert_debug_snapshot!(start_gma_section("GROUPMA"));
+        assert_debug_snapshot!("gma_section_ok", start_gma_section("GROUP_MA"));
+        assert_debug_snapshot!("gma_section_nook", start_gma_section("GROUPMA"));
     }
     #[test]
     fn group_section_parser_should_work() {
-        assert_debug_snapshot!(group_section("GROUP_NO nom = BORD_INT \n bI1 Bi2\n FINSF"));
-        assert_debug_snapshot!(group_section("GROUP_NO BORD_INT \n bI1 Bi2\n FINSF"));
-        assert_debug_snapshot!(group_section("GROUP_MA nom = BORD_INT \n bI1 Bi2\n FINSF"));
-        assert_debug_snapshot!(group_section("GROUP_MA BORD_INT \n bI1 Bi2\n FINSF"));
-        assert_debug_snapshot!(group_section("GROUP_MA BORD_INT \nbI1 Bi2 \n FINSF"));
-        assert_debug_snapshot!(group_section("GROUP_MA \nBORD_INT bI1 Bi2 \n FINSF"));
+        assert_debug_snapshot!("group_section_ok_1", group_section("GROUP_NO nom = BORD_INT \n bI1 Bi2\n FINSF"));
+        assert_debug_snapshot!("group_section_ok_2", group_section("GROUP_NO BORD_INT \n bI1 Bi2\n FINSF"));
+        assert_debug_snapshot!("group_section_ok_3", group_section("GROUP_MA nom = BORD_INT \n bI1 Bi2\n FINSF"));
+        assert_debug_snapshot!("group_section_ok_4", group_section("GROUP_MA BORD_INT \n bI1 Bi2\n FINSF"));
+        assert_debug_snapshot!("group_section_ok_5", group_section("GROUP_MA BORD_INT \nbI1 Bi2 \n FINSF"));
+        assert_debug_snapshot!("group_section_ok_6", group_section("GROUP_MA \nBORD_INT\nbI1 Bi2 \n FINSF"));
     }
 
     #[test]
     fn comment_or_lineending_should_work() {
-        assert_debug_snapshot!(comment_or_line_ending("%ble\n"));
-        assert_debug_snapshot!(comment_or_line_ending("% ble &\n"));
-        assert_debug_snapshot!(comment_or_line_ending("ddf % ble &\n"));
+        assert_debug_snapshot!("comment_or_lineending_ok_1", comment_or_line_ending("%ble\n"));
+        assert_debug_snapshot!("comment_or_lineending_ok_2", comment_or_line_ending("% ble &\n"));
+        assert_debug_snapshot!("comment_or_lineending_nook_1", comment_or_line_ending("ddf % ble &\n"));
     }
 
     #[test]
     fn useless_line_should_work() {
-        assert_debug_snapshot!(useless_line(" \t%ble\n"));
-        assert_debug_snapshot!(useless_line(" \t  \n"));
-        assert_debug_snapshot!(useless_line("\n"));
-        assert_debug_snapshot!(useless_line(" \n"));
-        assert_debug_snapshot!(useless_line(" % ble\n"));
+        assert_debug_snapshot!("useless_line_ok_1", useless_line(" \t%ble\n"));
+        assert_debug_snapshot!("useless_line_ok_2", useless_line(" \t  \n"));
+        assert_debug_snapshot!("useless_line_ok_3", useless_line("\n"));
+        assert_debug_snapshot!("useless_line_ok_4", useless_line(" \n"));
+        assert_debug_snapshot!("useless_line_ok_5", useless_line(" % ble\n"));
     }
 
     #[test]
     fn mail_final_parser_should_work() {
-        assert_debug_snapshot!(mail_parser(
+        assert_debug_snapshot!("mail_parser_1", mail_parser(
             "COOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"
         ));
-        assert_debug_snapshot!(mail_parser("COOR_3D  \n\nN1 2  3.0 4\nFINSF\nPOI1\nM1 N1\nFINSF\n\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"));
-        assert_debug_snapshot!(mail_parser(
+        assert_debug_snapshot!("mail_parser_2", mail_parser("COOR_3D  \n\nN1 2  3.0 4\nFINSF\nPOI1\nM1 N1\nFINSF\n\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"));
+        assert_debug_snapshot!("mail_parser_with_comments", mail_parser(
             "COOR_3D %comment \nN1 2  3.0 4\n    % another comment\nFINSF"
         ));
-        assert_debug_snapshot!(mail_parser(
-            "COOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF\nGROUP_NO GRP1 N1 N2 \nFINSF \n"
+        // with useless lines outside definition
+        assert_debug_snapshot!("mail_parser_uselesslines_1", mail_parser(
+            "COOR_3D\nN1 2 3.0 4\nFINSF\nCOOR_3D\nN2 2 3.0 4\nN3 3 4 4\nFINSF\nGROUP_NO GRP1 N1 N2\nFINSF \n"
         ));
-        assert_debug_snapshot!(mail_parser(
-            "\nCOOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"
+        assert_debug_snapshot!("mail_parser_uselesslines_2", mail_parser(
+            "\nCOOR_3D\nN1 2 3.0 4\nFINSF\nCOOR_3D\nN2 2 3.0 4\nN3 3 4 4\nFINSF"
         ));
-        assert_debug_snapshot!(mail_parser(
-            " \n %comment\nCOOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF \n %comment\n \n"
+        assert_debug_snapshot!("mail_parser_uselesslines_3", mail_parser(
+            " \n %comment\nCOOR_3D\nN1 2 3.0 4\nFINSF\nCOOR_3D\nN2 2 3.0 4\nN3 3 4 4\nFINSF\n %comment\n \n"
+        ));
+        // with nodes, cells, groups of nodes and groups of cells
+        assert_debug_snapshot!("mail_parser_complete_1", mail_parser(
+            "COOR_3D\nN1 2 3.0 4\nN2 2 3.0 4\nN3 3 4 4\nFINSF\nPOI1\nM1 N1\nM2 N2\nFINSF\nSEG2\nM3 N1 N2\nM4 N1 N3\nFINSF\nGROUP_NO GRP1 N1 N2\nFINSF\nGROUP_NO\nGRP2 N1 N3\nFINSF\nGROUP_MA GRP3 M1 M2\nFINSF\nGROUP_MA\nGRP4 M1 M3\nFINSF \n"
         ));
     }
 }

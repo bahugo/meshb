@@ -1,0 +1,10 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "start_3d_node_section(\"COOR_3D\")"
+---
+Ok(
+    (
+        "",
+        "COOR_3D",
+    ),
+)

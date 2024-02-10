@@ -1,0 +1,16 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "start_3d_node_section(\"COORD3D\")"
+---
+Err(
+    Error(
+        Base {
+            location: "COORD3D",
+            kind: Expected(
+                Tag(
+                    "COOR_3D",
+                ),
+            ),
+        },
+    ),
+)

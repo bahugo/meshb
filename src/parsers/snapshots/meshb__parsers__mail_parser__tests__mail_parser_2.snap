@@ -1,0 +1,38 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "mail_parser(\"COOR_3D  \\n\\nN1 2  3.0 4\\nFINSF\\nPOI1\\nM1 N1\\nFINSF\\n\\nCOOR_3D  \\nN2 2  3.0 4\\nN3 3  4 4\\nFINSF\")"
+---
+Ok(
+    MailParseOutput {
+        nodes: [
+            NodeProp {
+                name: "N1",
+                x: 2.0,
+                y: 3.0,
+                z: 4.0,
+            },
+            NodeProp {
+                name: "N2",
+                x: 2.0,
+                y: 3.0,
+                z: 4.0,
+            },
+            NodeProp {
+                name: "N3",
+                x: 3.0,
+                y: 4.0,
+                z: 4.0,
+            },
+        ],
+        cells: [
+            CellProp {
+                cell_type: POI1,
+                name: "M1",
+                nodes: [
+                    "N1",
+                ],
+            },
+        ],
+        groups: [],
+    },
+)

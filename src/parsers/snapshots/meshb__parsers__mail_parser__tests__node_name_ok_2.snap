@@ -1,0 +1,10 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "node_or_cell_name(\"MD12\")"
+---
+Ok(
+    (
+        "",
+        "MD12",
+    ),
+)

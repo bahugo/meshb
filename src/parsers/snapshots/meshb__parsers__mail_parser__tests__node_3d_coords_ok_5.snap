@@ -1,0 +1,14 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "node_3d_coords(\"   1\\n  2 3 \")"
+---
+Ok(
+    (
+        "",
+        [
+            1.0,
+            2.0,
+            3.0,
+        ],
+    ),
+)
