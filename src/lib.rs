@@ -4,7 +4,6 @@ mod mesh;
 mod mesh_enums;
 mod node;
 mod cell;
-mod mail_parser;
 mod parsers;
 
 pub mod lib{
@@ -12,7 +11,7 @@ pub mod lib{
     pub use crate::mesh_enums::{CellType, MeshFormat};
     pub use crate::node::Node;
     pub use crate::cell::{Poi1Cell, Seg2Cell};
-    pub use crate::mail_parser::mail_parser;
+    pub use crate::parsers::mail_parser;
 }
 
 #[cfg(test)]
