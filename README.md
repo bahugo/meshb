@@ -1,5 +1,10 @@
 # Meshb
 
+[![Build Status][build-badge]][build]
+
+[build-badge]: https://img.shields.io/github/actions/workflow/status/bahugo/meshb/rust.yml?style=flat-square&branch=master
+[build]: https://github.com/bahugo/meshb/actions/
+
 ## Introduction
 
 Meshb is a rust library to handle FEM meshes.
@@ -51,3 +56,11 @@ Meshb is an experimental personnal project. It's not ready for production yet.
 **Misc :**
 - [ ] Create python bindings
 
+## Available parsers
+
+### Code_aster .mail format
+
+Code_aster is a FEA software. Here is the .mail format documentation : 
+
+- [In french](https://code-aster.org/V2/doc/default/en/man_u/u3/u3.01.00.pdf)
+- [In english](https://code-aster.org/V2/doc/default/en/man_u/u3/u3.01.00.pdf)
