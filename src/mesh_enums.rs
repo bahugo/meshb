@@ -87,3 +87,15 @@ impl CellType {
         };
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use crate::mesh_enums::CellType;
+
+    #[test]
+    fn cell_type_connectivity_nb_should_work() {
+        assert_eq!(CellType::POI1.get_nb_of_connectivities(), 1);
+    }
+}
+

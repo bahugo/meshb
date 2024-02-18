@@ -9,7 +9,7 @@
 
 Meshb is a rust library to handle FEM meshes.
 
-**Its main goal is to be able :** 
+**Its main goal is to be able :**
 - load a mesh from a file,
 - perform modifications (nodes, cells, groups, ...),
 - dump modifications to a file
@@ -25,24 +25,24 @@ Meshb is an experimental personnal project. It's not ready for production yet.
 - [x] Node
 - [x] POI1 cell
 - [x] SEG2 cell
-- [ ] SEG3 cell
-- [ ] SEG4 cell
-- [ ] TRIA3 cell
-- [ ] TRIA6 cell
-- [ ] TRIA7 cell
-- [ ] QUAD4 cell
-- [ ] QUAD8 cell
-- [ ] QUAD9 cell
-- [ ] HEXA8 cell
-- [ ] HEXA20 cell
-- [ ] HEXA27 cell
-- [ ] PENTA6 cell
-- [ ] PENTA15 cell
-- [ ] PENTA18 cell
-- [ ] TETRA4 cell
-- [ ] TETRA10 cell
-- [ ] PYRAM5 cell
-- [ ] PYRAM13 cell
+- [x] SEG3 cell
+- [x] SEG4 cell
+- [x] TRIA3 cell
+- [x] TRIA6 cell
+- [x] TRIA7 cell
+- [x] QUAD4 cell
+- [x] QUAD8 cell
+- [x] QUAD9 cell
+- [x] HEXA8 cell
+- [x] HEXA20 cell
+- [x] HEXA27 cell
+- [x] PENTA6 cell
+- [x] PENTA15 cell
+- [x] PENTA18 cell
+- [x] TETRA4 cell
+- [x] TETRA10 cell
+- [x] PYRAM5 cell
+- [x] PYRAM13 cell
 
 **Mesh container :**
 - [x] Create nodes
@@ -60,7 +60,7 @@ Meshb is an experimental personnal project. It's not ready for production yet.
 
 ### Code_aster .mail format
 
-Code_aster is a FEA software. Here is the .mail format documentation : 
+Code_aster is a FEA software. Here is the .mail format documentation :
 
 - [In french](https://code-aster.org/V2/doc/default/en/man_u/u3/u3.01.00.pdf)
 - [In english](https://code-aster.org/V2/doc/default/en/man_u/u3/u3.01.00.pdf)
