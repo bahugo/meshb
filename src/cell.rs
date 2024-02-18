@@ -1,72 +1,28 @@
 use ndarray::Array1;
 
+use crate::lib::CellType;
 
-pub trait MeshCell{
-    fn get_co(&self) -> Array1<usize>;
-    fn new(connectivity: &Array1<usize>) -> Result<Self, &'static str> where Self: Sized;
-}
 
 #[derive(Debug, Clone)]
-pub struct Poi1Cell {
+pub struct MeshCell {
+    pub ty: CellType,
     pub co: Array1<usize>,
+
 }
 
-impl MeshCell for Poi1Cell {
-    fn get_co(&self) -> Array1<usize> {
+impl MeshCell {
+    pub fn get_co(&self) -> Array1<usize> {
         self.co.clone()
     }
 
-    fn new(connectivity: &Array1<usize>) -> Result<Poi1Cell, &'static str>{
+    pub fn new(cell_type: CellType, connectivity: &Array1<usize>) -> Result<MeshCell, &'static str>{
 
-        if connectivity.len() != 1 {
+        if connectivity.len() != cell_type.get_nb_of_connectivities() {
             return Err("Poi1Cell connectivity must be of length 1");
         }
-        Ok(Poi1Cell {
+        Ok(MeshCell {
+            ty: cell_type,
             co: connectivity.clone(),
         })
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Seg2Cell {
-    pub co: Array1<usize>,
-}
-
-impl MeshCell for Seg2Cell {
-    fn get_co(&self) -> Array1<usize> {
-        self.co.clone()
-    }
-    fn new(connectivity: &Array1<usize>) -> Result<Seg2Cell, &'static str> {
-        if connectivity.len() != 2 {
-            return Err("Poi1Cell connectivity must be of length 2");
-        }
-        Ok(Seg2Cell {
-            co: connectivity.clone(),
-        })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Tria3Cell {
-    pub co: Array1<usize>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Quad4Cell {
-    pub co: Array1<usize>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Penta6Cell {
-    pub co: Array1<usize>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Pyram5Cell {
-    pub co: Array1<usize>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Hexa8Cell {
-    pub co: Array1<usize>,
 }

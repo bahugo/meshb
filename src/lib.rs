@@ -10,7 +10,7 @@ pub mod lib{
     pub use crate::mesh::Mesh;
     pub use crate::mesh_enums::{CellType, MeshFormat};
     pub use crate::node::Node;
-    pub use crate::cell::{Poi1Cell, Seg2Cell};
+    pub use crate::cell::MeshCell;
     pub use crate::parsers::mail_parser;
 }
 

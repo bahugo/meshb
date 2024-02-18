@@ -6,7 +6,7 @@ use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
-use crate::cell::{MeshCell, Poi1Cell, Seg2Cell};
+use crate::cell::MeshCell;
 use crate::mesh_enums::{CellType, MeshFormat};
 use crate::node::Node;
 
@@ -48,7 +48,7 @@ pub struct Mesh {
     // noeuds
     pub nodes: HashMap<usize, Cell<Node>>,
     // mailles
-    pub cells: HashMap<usize, Box<dyn MeshCell>>,
+    pub cells: HashMap<usize, MeshCell>,
     // gno [Group]: groupes de noeuds (dictionnaire de arrays de numéros de noeuds)
     pub gno: HashMap<&'static str, Vec<usize>>,
     // gma [Group]: groupes de mailles (dictionnaire de arrays de numéros de mailles)
@@ -112,28 +112,7 @@ impl Mesh {
         connectivities: &[Array1<usize>],
         ty: CellType,
     ) -> Result<Vec<usize>, &str> {
-        match ty {
-            CellType::POI1 => self.add_cells_of_type::<Poi1Cell>(connectivities),
-            CellType::SEG2 => self.add_cells_of_type::<Seg2Cell>(connectivities),
-            CellType::TRIA3 => { unimplemented!() }
-            CellType::QUAD4 => { unimplemented!() }
-            CellType::PENTA6 => { unimplemented!() }
-            CellType::PYRAM5 => { unimplemented!() }
-            CellType::HEXA8 => { unimplemented!() }
-            CellType::SEG3 => todo!(),
-            CellType::SEG4 => todo!(),
-            CellType::TRIA6 => todo!(),
-            CellType::TRIA7 => todo!(),
-            CellType::QUAD8 => todo!(),
-            CellType::QUAD9 => todo!(),
-            CellType::HEXA20 => todo!(),
-            CellType::HEXA27 => todo!(),
-            CellType::PENTA15 => todo!(),
-            CellType::PENTA18 => todo!(),
-            CellType::TETRA4 => todo!(),
-            CellType::TETRA10 => todo!(),
-            CellType::PYRAM13 => todo!(),
-        }
+        self.add_cells_of_type(ty, connectivities)
     }
 
     pub fn get_cell_name(cell_id: usize) -> String {
@@ -156,42 +135,37 @@ impl Mesh {
         Ok(out)
     }
 
-    pub fn create_one_cell<T>(connectivity: &Array1<usize>) -> Result<T, &'static str>
-    where
-        T: MeshCell,
+    pub fn create_one_cell(cell_type: CellType, connectivity: &Array1<usize>) -> Result<MeshCell, &'static str>
     {
-        let cell = T::new(connectivity);
+        let cell = MeshCell::new(cell_type, connectivity);
         cell
     }
 
-    pub fn add_cells_of_type<T>(
+    pub fn add_cells_of_type(
         &mut self,
+        cell_type: CellType,
         connectivities: &[Array1<usize>],
     ) -> Result<Vec<usize>, &'static str>
-    where
-        T: MeshCell + 'static,
     {
         let mut cells = vec![];
         for nodes in connectivities.iter() {
-            let cell = match Self::create_one_cell::<T>(nodes) {
+            let cell = match Self::create_one_cell(cell_type.clone(), nodes) {
                 Ok(p) => p,
                 Err(e) => return Err(e),
             };
-            self.cells.insert(self.next_cell_id, Box::new(cell));
+            self.cells.insert(self.next_cell_id, cell);
             cells.push(self.next_cell_id);
             self.next_cell_id += 1;
         }
         Ok(cells)
     }
 
-    fn extract_cell_result<T>(
-        cell: Result<T, &'static str>,
-    ) -> Result<Box<dyn MeshCell>, &'static str>
-    where
-        T: MeshCell + 'static,
+    fn extract_cell_result(
+        cell: Result<MeshCell, &'static str>,
+    ) -> Result<MeshCell, &'static str>
     {
         match cell {
-            Ok(val) => Ok(Box::new(val)),
+            Ok(val) => Ok(val),
             Err(e) => Err(e),
         }
     }
@@ -202,29 +176,8 @@ impl Mesh {
         connectivity: &Array1<usize>,
         ty: CellType,
     ) -> bool {
-        let val: Result<Box<dyn MeshCell>, &'static str>;
-        match ty {
-            CellType::POI1 => val = Self::extract_cell_result(Poi1Cell::new(connectivity)),
-            CellType::SEG2 => val = Self::extract_cell_result(Seg2Cell::new(connectivity)),
-            CellType::TRIA3 => { unimplemented!(); }
-            CellType::QUAD4 => { unimplemented!() }
-            CellType::PENTA6 => { unimplemented!() }
-            CellType::PYRAM5 => { unimplemented!() }
-            CellType::HEXA8 => { unimplemented!() }
-            CellType::SEG3 => todo!(),
-            CellType::SEG4 => todo!(),
-            CellType::TRIA6 => todo!(),
-            CellType::TRIA7 => todo!(),
-            CellType::QUAD8 => todo!(),
-            CellType::QUAD9 => todo!(),
-            CellType::HEXA20 => todo!(),
-            CellType::HEXA27 => todo!(),
-            CellType::PENTA15 => todo!(),
-            CellType::PENTA18 => todo!(),
-            CellType::TETRA4 => todo!(),
-            CellType::TETRA10 => todo!(),
-            CellType::PYRAM13 => todo!(),
-        }
+        let val: Result<MeshCell, &'static str>;
+        val = Self::extract_cell_result(MeshCell::new(ty, connectivity));
         match val {
             Ok(ok_val) => {
                 if self.cells.insert(index, ok_val).is_none() {
@@ -283,8 +236,6 @@ impl Mesh {
 
 #[cfg(test)]
 mod tests {
-
-    use std::ops::Deref;
 
     use crate::mesh::Mesh;
     use crate::mesh_enums::CellType;
