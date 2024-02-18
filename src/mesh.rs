@@ -1,14 +1,17 @@
 use core::fmt;
 
 use ndarray::prelude::*;
+use nom_supreme::error::ErrorTree;
 
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
 use crate::cell::MeshCell;
+use crate::lib::mail_parser::mail_parser;
 use crate::mesh_enums::{CellType, MeshFormat};
 use crate::node::Node;
+use crate::parsers::tokens::MailParseOutput;
 
 // cn [ndarray]: coordonnées des noeuds    (nb_nodes x dim)
 // co [dict]: connectivités des mailles
@@ -216,21 +219,45 @@ impl Mesh {
         self.gma.insert(name, target_cell_ids);
         Ok(())
     }
-    pub fn read_mesh(filename: &str, format: MeshFormat) -> Mesh {
+
+    pub fn create_from_parser_output(parser_output: MailParseOutput) -> Mesh {
         let mesh = Mesh::new();
-        match format {
-            MeshFormat::Mail => mesh.read_mail_format(filename),
+        // mesh.add_nodes(parser_output.nodes, parser_output.nodes.iter().)
+        for node_prop in parser_output.nodes {
+           todo!()
+        }
+        for cell in parser_output.cells {
+           todo!()
+        }
+        for group in parser_output.groups {
+           todo!()
         }
         mesh
+
     }
-    pub fn read_mail_format(&self, filename: &str) {
+
+    pub fn read_mesh(filename: &str, format: MeshFormat) -> Mesh {
+        let parser_output = match format {
+            MeshFormat::Mail => Mesh::read_mail_format(filename),
+        };
+        let output = match parser_output {
+            Ok(val) => val,
+            Err(err) => panic!("{}", err)
+        };
+
+        Mesh::create_from_parser_output(output)
+    }
+
+    pub fn read_mail_format(filename: &str) -> Result<MailParseOutput, &'static str> {
         println!("Reading file {}", filename);
 
-        let _contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+        let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
 
-        // TODO: parse contents with regex
-
-        println!("Ended reading {}", filename);
+        let output = mail_parser(&contents);
+        match output {
+            Ok(val) => Ok(val),
+            _ => Err("parser failed")
+        }
     }
 }
 
@@ -243,7 +270,7 @@ mod tests {
     use ndarray::array;
 
     #[test]
-    fn patro_mesh_init_empty_should_work() {
+    fn mesh_init_empty_should_work() {
         let mesh = Mesh::new();
         assert_eq!(mesh.cells.len(), 0);
         assert_eq!(mesh.nodes.len(), 0);
@@ -252,7 +279,7 @@ mod tests {
     }
 
     #[test]
-    fn patro_mesh_add_nodes_should_work() {
+    fn mesh_add_nodes_should_work() {
         let mut mesh = Mesh::new();
         let nodes_names = ["N12", "N2"];
         let nodes = array![[3., 0., 1.], [2., 1., 1.]];
@@ -319,14 +346,14 @@ mod tests {
     }
 
     #[test]
-    fn patro_mesh_add_cells_should_return_err_when_connectivity_has_bad_len() {
+    fn mesh_add_cells_should_return_err_when_connectivity_has_bad_len() {
         let mut mesh = get_mesh_with_six_nodes();
         let new_cells = mesh.add_cells(&[array![0], array![2,2]], CellType::POI1);
         assert_eq!(new_cells.is_err(), true);
     }
 
     #[test]
-    fn patro_mesh_add_cells_should_work_for_poi1() {
+    fn mesh_add_cells_should_work_for_poi1() {
         let mut mesh = get_mesh_with_six_nodes();
 
         assert_eq!(mesh.cells.len(), 0);
@@ -362,7 +389,7 @@ mod tests {
     }
 
     #[test]
-    fn patro_mesh_add_cells_should_work_for_seg2() {
+    fn mesh_add_cells_should_work_for_seg2() {
         let mut mesh = get_mesh_with_six_nodes();
         assert_eq!(mesh.cells.len(), 0);
         let new_cells = add_two_seg2_cells(&mut mesh);

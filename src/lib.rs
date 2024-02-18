@@ -16,18 +16,6 @@ pub mod lib{
 
 #[cfg(test)]
 mod tests {
-    // use std::env::{current_dir, join_paths};
-    // use ndarray;
-    // use ndarray::prelude::*;
-    // use std::fs;
-    // use std::fs::File;
-    // use std::io::Write;
-    // use std::ops::Index;
-    // use std::path::Path;
-    // use num_traits::cast::ToPrimitive;
-    // use crate::patro_mesh::PatroMesh;
-    // use crate::patro_mesh_enums::PatroCellType;
-    // use crate::patro_node::PatroNode;
 
 
     // #[test]

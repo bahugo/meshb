@@ -49,7 +49,7 @@ fn node_description(input: &str) -> IResult<&str, NodeProp, ErrorTree<&str>> {
         node_3d_coords,
         multispace0,
     ))(input)?;
-    Ok((input, NodeProp { name, x, y, z }))
+    Ok((input, NodeProp::new(name, x, y, z )))
 }
 
 fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp, ErrorTree<&str>> {
@@ -59,14 +59,7 @@ fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp,
         many_m_n(nb_nodes, nb_nodes, preceded(multispace1, node_or_cell_name)),
         multispace0,
     ))(input)?;
-    Ok((
-        input,
-        CellProp {
-            cell_type,
-            name,
-            nodes: node_names,
-        },
-    ))
+    Ok((input, CellProp::new(cell_type, name, node_names)))
 }
 
 fn group_description(group_type: GroupType, input: &str) -> IResult<&str, Group, ErrorTree<&str>> {
@@ -85,11 +78,7 @@ fn group_description(group_type: GroupType, input: &str) -> IResult<&str, Group,
     ))(input)?;
     Ok((
         input,
-        Group {
-            group_type,
-            name: grp_name,
-            elems: elems_names,
-        },
+        Group::new(group_type, grp_name, elems_names),
     ))
 }
 
@@ -238,8 +227,8 @@ fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, Error
     Ok((input, output))
 }
 
-pub fn mail_parser(input: &str) -> Result<MailParseOutput, ()> {
-    final_parser(mail_intermediate_parser)(input)
+pub fn mail_parser<'a>(input: &'a str) ->  Result<MailParseOutput, ErrorTree<&'a str>>  {
+   final_parser(mail_intermediate_parser)(input)
 }
 
 #[cfg(test)]

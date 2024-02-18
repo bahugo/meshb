@@ -96,6 +96,24 @@ mod tests {
     #[test]
     fn cell_type_connectivity_nb_should_work() {
         assert_eq!(CellType::POI1.get_nb_of_connectivities(), 1);
+        assert_eq!(CellType::SEG2.get_nb_of_connectivities(), 2);
+        assert_eq!(CellType::SEG3.get_nb_of_connectivities(), 3);
+        assert_eq!(CellType::SEG4.get_nb_of_connectivities(), 4);
+        assert_eq!(CellType::TRIA3.get_nb_of_connectivities(), 3);
+        assert_eq!(CellType::TRIA6.get_nb_of_connectivities(), 6);
+        assert_eq!(CellType::TRIA7.get_nb_of_connectivities(), 7);
+        assert_eq!(CellType::QUAD4.get_nb_of_connectivities(), 4);
+        assert_eq!(CellType::QUAD8.get_nb_of_connectivities(), 8);
+        assert_eq!(CellType::QUAD9.get_nb_of_connectivities(), 9);
+        assert_eq!(CellType::HEXA8.get_nb_of_connectivities(), 8);
+        assert_eq!(CellType::HEXA20.get_nb_of_connectivities(), 20);
+        assert_eq!(CellType::HEXA27.get_nb_of_connectivities(), 27);
+        assert_eq!(CellType::PENTA6.get_nb_of_connectivities(), 6);
+        assert_eq!(CellType::PENTA15.get_nb_of_connectivities(), 15);
+        assert_eq!(CellType::PENTA18.get_nb_of_connectivities(), 18);
+        assert_eq!(CellType::TETRA4.get_nb_of_connectivities(), 4);
+        assert_eq!(CellType::TETRA10.get_nb_of_connectivities(), 10);
+        assert_eq!(CellType::PYRAM5.get_nb_of_connectivities(), 5);
+        assert_eq!(CellType::PYRAM13.get_nb_of_connectivities(), 13);
     }
 }
-
