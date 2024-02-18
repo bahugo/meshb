@@ -9,7 +9,6 @@ pub enum GroupType {
 
 #[derive(Debug, PartialEq)]
 pub enum MailValue<'a> {
-    Null,
     NodeElts(Vec<NodeProp<'a>>),
     Cells(Vec<CellProp<'a>>),
     Group(Group<'a>),

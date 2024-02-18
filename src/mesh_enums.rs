@@ -1,4 +1,4 @@
-use derive_more::{Display};
+use derive_more::Display;
 
 #[derive(Display)]
 pub enum MeshFormat {

@@ -233,7 +233,6 @@ fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, Error
                     acc.groups.insert(acc.groups.len(), group.to_owned());
                     acc
                 }
-                _ => acc,
             },
         );
     Ok((input, output))
