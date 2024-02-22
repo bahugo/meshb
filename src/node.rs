@@ -3,20 +3,21 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 use num_traits::abs;
 
+
 #[derive(Debug, Clone, Copy)]
-pub struct Node {
+pub struct Node<'a> {
     pub x: f64,
     pub y: f64,
     pub z: f64,
-    pub name: &'static str,
+    pub name: &'a str,
 }
-impl Display for Node{
+impl<'a> Display for Node<'a>{
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         // Use `self.number` to refer to each positional data point.
         write!(f, "{} ({}, {}, {})", self.name, self.x, self.y, self.z, )
     }
 }
-impl PartialEq for Node
+impl<'a> PartialEq for Node<'a>
 {
     fn eq(&self, other: &Self) -> bool {
         abs(self.x - other.x) <= 1e-6 + 1e-6 * abs(other.x) &&
@@ -26,8 +27,8 @@ impl PartialEq for Node
     }
 }
 
-impl Add for Node {
-    type Output = Node;
+impl<'a> Add for Node<'a> {
+    type Output = Node<'a>;
 
     fn add(self, other: Node) -> Node {
         Node {
@@ -38,8 +39,8 @@ impl Add for Node {
         }
     }
 }
-impl Sub for Node {
-    type Output = Node;
+impl<'a> Sub for Node<'a> {
+    type Output = Node<'a>;
 
     fn sub(self, other: Node) -> Node {
         Node {

@@ -1,7 +1,6 @@
 use core::fmt;
 
 use ndarray::prelude::*;
-use nom_supreme::error::ErrorTree;
 
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
@@ -11,7 +10,7 @@ use crate::cell::MeshCell;
 use crate::lib::mail_parser::mail_parser;
 use crate::mesh_enums::{CellType, MeshFormat};
 use crate::node::Node;
-use crate::parsers::tokens::MailParseOutput;
+use crate::parsers::tokens::{MailParseOutput, NodeProp};
 
 // cn [ndarray]: coordonnées des noeuds    (nb_nodes x dim)
 // co [dict]: connectivités des mailles
@@ -27,7 +26,6 @@ use crate::parsers::tokens::MailParseOutput;
 // self.gma = gma or {}            # groups of cells
 // self.ty = ty if ty is not None else []      # list of cells' type
 // self.ty = np.array(self.ty, dtype=np.uint8)
-
 
 pub struct MeshError {
     message: String,
@@ -45,11 +43,11 @@ impl fmt::Debug for MeshError {
 }
 
 // #[derive(Debug, PartialEq, Clone)]
-pub struct Mesh {
+pub struct Mesh<'a> {
     pub next_node_id: usize,
     pub next_cell_id: usize,
     // noeuds
-    pub nodes: HashMap<usize, Cell<Node>>,
+    pub nodes: HashMap<usize, Cell<Node<'a>>>,
     // mailles
     pub cells: HashMap<usize, MeshCell>,
     // gno [Group]: groupes de noeuds (dictionnaire de arrays de numéros de noeuds)
@@ -58,7 +56,7 @@ pub struct Mesh {
     pub gma: HashMap<&'static str, Vec<usize>>,
 }
 
-impl Mesh {
+impl<'a> Mesh<'a> {
     pub fn new() -> Self {
         Mesh {
             next_node_id: 0,
@@ -70,13 +68,14 @@ impl Mesh {
         }
     }
 
-    pub fn add_nodes(&mut self, nodes: &Array2<f64>, nodes_names: &[&'static str]) {
-        for inode in 0..nodes.shape()[0] {
+    pub fn add_nodes(&mut self, nodes: Vec<NodeProp<'a>>) {
+        for inode in 0..nodes.len() {
+            let node_prop = &nodes[inode];
             let node_tmp = Cell::new(Node {
-                x: nodes[[inode, 0]],
-                y: nodes[[inode, 1]],
-                z: nodes[[inode, 2]],
-                name: nodes_names[inode],
+                x: node_prop.x.into(),
+                y: node_prop.y.into(),
+                z: node_prop.z.into(),
+                name: node_prop.name,
             });
             self.nodes.insert(self.next_node_id, node_tmp);
             // incrément du prochain node_id
@@ -122,7 +121,7 @@ impl Mesh {
         format!("M{}", &(cell_id + 1))
     }
 
-    pub fn get_cell_co(&self, cell_id: usize) -> Result<Vec<&Cell<Node>>, MeshError> {
+    pub fn get_cell_co(&self, cell_id: usize) -> Result<Vec<&Cell<Node<'a>>>, MeshError> {
         let node_ids = match self.cells.get(&cell_id) {
             Some(val) => val.get_co(),
             None => {
@@ -138,8 +137,10 @@ impl Mesh {
         Ok(out)
     }
 
-    pub fn create_one_cell(cell_type: CellType, connectivity: &Array1<usize>) -> Result<MeshCell, &'static str>
-    {
+    pub fn create_one_cell(
+        cell_type: CellType,
+        connectivity: &Array1<usize>,
+    ) -> Result<MeshCell, &'static str> {
         let cell = MeshCell::new(cell_type, connectivity);
         cell
     }
@@ -148,8 +149,7 @@ impl Mesh {
         &mut self,
         cell_type: CellType,
         connectivities: &[Array1<usize>],
-    ) -> Result<Vec<usize>, &'static str>
-    {
+    ) -> Result<Vec<usize>, &'static str> {
         let mut cells = vec![];
         for nodes in connectivities.iter() {
             let cell = match Self::create_one_cell(cell_type.clone(), nodes) {
@@ -163,22 +163,14 @@ impl Mesh {
         Ok(cells)
     }
 
-    fn extract_cell_result(
-        cell: Result<MeshCell, &'static str>,
-    ) -> Result<MeshCell, &'static str>
-    {
+    fn extract_cell_result(cell: Result<MeshCell, &'static str>) -> Result<MeshCell, &'static str> {
         match cell {
             Ok(val) => Ok(val),
             Err(e) => Err(e),
         }
     }
 
-    pub fn edit_cell(
-        &mut self,
-        index: usize,
-        connectivity: &Array1<usize>,
-        ty: CellType,
-    ) -> bool {
+    pub fn edit_cell(&mut self, index: usize, connectivity: &Array1<usize>, ty: CellType) -> bool {
         let val: Result<MeshCell, &'static str>;
         val = Self::extract_cell_result(MeshCell::new(ty, connectivity));
         match val {
@@ -191,13 +183,18 @@ impl Mesh {
             Err(_e) => false,
         }
     }
-    pub fn create_node_group(&mut self, name: &'static str, node_ids: &Vec<usize>) -> Result<(), &'static str> {
+    pub fn create_node_group(
+        &mut self,
+        name: &'static str,
+        node_ids: &Vec<usize>,
+    ) -> Result<(), &'static str> {
         let unique_node_ids: HashSet<usize> = node_ids.clone().into_iter().collect();
         let existing_node_ids: HashSet<usize> = self.nodes.keys().cloned().collect();
-        let intersection = existing_node_ids.intersection(&unique_node_ids).collect::<Vec<&usize>>();
+        let intersection = existing_node_ids
+            .intersection(&unique_node_ids)
+            .collect::<Vec<&usize>>();
 
-        if intersection.len() != unique_node_ids.len()
-        {
+        if intersection.len() != unique_node_ids.len() {
             return Err("At least one node_id is not contained in mesh");
         }
         let mut target_node_ids = unique_node_ids.into_iter().collect::<Vec<usize>>();
@@ -205,13 +202,18 @@ impl Mesh {
         self.gma.insert(name, target_node_ids);
         Ok(())
     }
-    pub fn create_cell_group(&mut self, name: &'static str, cell_ids: &Vec<usize>) -> Result<(), &'static str> {
+    pub fn create_cell_group(
+        &mut self,
+        name: &'static str,
+        cell_ids: &Vec<usize>,
+    ) -> Result<(), &'static str> {
         let unique_cell_ids: HashSet<usize> = cell_ids.clone().into_iter().collect();
         let existing_cell_ids: HashSet<usize> = self.cells.keys().cloned().collect();
-        let intersection = existing_cell_ids.intersection(&unique_cell_ids).collect::<Vec<&usize>>();
+        let intersection = existing_cell_ids
+            .intersection(&unique_cell_ids)
+            .collect::<Vec<&usize>>();
 
-        if intersection.len() != unique_cell_ids.len()
-        {
+        if intersection.len() != unique_cell_ids.len() {
             return Err("At least one cell_id is not contained in mesh");
         }
         let mut target_cell_ids = unique_cell_ids.into_iter().collect::<Vec<usize>>();
@@ -221,42 +223,38 @@ impl Mesh {
     }
 
     pub fn create_from_parser_output(parser_output: MailParseOutput) -> Mesh {
-        let mesh = Mesh::new();
-        // mesh.add_nodes(parser_output.nodes, parser_output.nodes.iter().)
-        for node_prop in parser_output.nodes {
-           todo!()
-        }
+        let mut mesh = Mesh::new();
+        mesh.add_nodes(parser_output.nodes.to_owned());
         for cell in parser_output.cells {
-           todo!()
+            todo!()
         }
         for group in parser_output.groups {
-           todo!()
+            todo!()
         }
         mesh
-
     }
 
-    pub fn read_mesh(filename: &str, format: MeshFormat) -> Mesh {
+    pub fn read_mesh(filename: &str, format: MeshFormat) {
+        println!("Reading file {}", filename);
+
+        let content = fs::read_to_string(filename).expect("Something went wrong reading the file");
+
         let parser_output = match format {
-            MeshFormat::Mail => Mesh::read_mail_format(filename),
+            MeshFormat::Mail => Mesh::read_mail_format(&content),
         };
         let output = match parser_output {
             Ok(val) => val,
-            Err(err) => panic!("{}", err)
+            Err(err) => panic!("{}", err),
         };
 
-        Mesh::create_from_parser_output(output)
+        let mesh = Mesh::create_from_parser_output(output);
     }
 
-    pub fn read_mail_format(filename: &str) -> Result<MailParseOutput, &'static str> {
-        println!("Reading file {}", filename);
-
-        let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
-
-        let output = mail_parser(&contents);
+    pub fn read_mail_format(content: &'a str) -> Result<MailParseOutput<'a>, &'a str> {
+        let output = mail_parser(content);
         match output {
             Ok(val) => Ok(val),
-            _ => Err("parser failed")
+            _ => Err("parser failed"),
         }
     }
 }
@@ -267,6 +265,7 @@ mod tests {
     use crate::mesh::Mesh;
     use crate::mesh_enums::CellType;
     use crate::node::Node;
+    use crate::parsers::tokens::NodeProp;
     use ndarray::array;
 
     #[test]
@@ -281,9 +280,21 @@ mod tests {
     #[test]
     fn mesh_add_nodes_should_work() {
         let mut mesh = Mesh::new();
-        let nodes_names = ["N12", "N2"];
-        let nodes = array![[3., 0., 1.], [2., 1., 1.]];
-        mesh.add_nodes(&nodes, &nodes_names);
+        let nodes = vec![
+            NodeProp {
+                x: 3.,
+                y: 0.,
+                z: 1.,
+                name: "N12",
+            },
+            NodeProp {
+                x: 2.,
+                y: 1.,
+                z: 1.,
+                name: "N2",
+            },
+        ];
+        mesh.add_nodes(nodes);
         assert_eq!(mesh.nodes.len(), 2);
         let _node = mesh.nodes[&0].get();
         assert_eq!(
@@ -306,9 +317,21 @@ mod tests {
         );
         assert_eq!(mesh.gno.len(), 0);
         assert_eq!(mesh.gma.len(), 0);
-        let nodes_names = ["N21", "N222"];
-        let nodes = array![[3.2, 0.3, 1.3], [2.1, 1.1, 1.1]];
-        mesh.add_nodes(&nodes, &nodes_names);
+        let nodes = vec![
+            NodeProp {
+                x: 3.2,
+                y: 0.3,
+                z: 1.3,
+                name: "N21",
+            },
+            NodeProp {
+                x: 2.1,
+                y: 1.1,
+                z: 1.1,
+                name: "N222",
+            },
+        ];
+        mesh.add_nodes(nodes);
         assert_eq!(mesh.nodes.len(), 4);
         assert_eq!(
             (mesh.nodes[&2].get()),
@@ -330,25 +353,54 @@ mod tests {
         );
     }
 
-    fn get_mesh_with_six_nodes() -> Mesh {
+    fn get_mesh_with_six_nodes() -> Mesh<'static> {
         let mut mesh = Mesh::new();
-        let nodes_names = ["N1", "N2", "N3", "N4", "N5", "N6"];
-        let nodes = array![
-            [3., 0., 1.],
-            [2., 1., 1.],
-            [3.2, 0.3, 1.3],
-            [2.1, 1.1, 1.1],
-            [4.2, 0.3, 1.3],
-            [3.1, 1.1, 1.1]
+        let nodes = vec![
+            NodeProp {
+                x: 3.,
+                y: 0.,
+                z: 1.,
+                name: "N1",
+            },
+            NodeProp {
+                x: 2.,
+                y: 1.,
+                z: 1.,
+                name: "N2",
+            },
+            NodeProp {
+                x: 3.2,
+                y: 0.3,
+                z: 1.3,
+                name: "N3",
+            },
+            NodeProp {
+                x: 2.1,
+                y: 1.1,
+                z: 1.1,
+                name: "N4",
+            },
+            NodeProp {
+                x: 4.2,
+                y: 0.3,
+                z: 1.3,
+                name: "N5",
+            },
+            NodeProp {
+                x: 3.1,
+                y: 1.1,
+                z: 1.1,
+                name: "N6",
+            },
         ];
-        mesh.add_nodes(&nodes, &nodes_names);
+        mesh.add_nodes(nodes);
         mesh
     }
 
     #[test]
     fn mesh_add_cells_should_return_err_when_connectivity_has_bad_len() {
         let mut mesh = get_mesh_with_six_nodes();
-        let new_cells = mesh.add_cells(&[array![0], array![2,2]], CellType::POI1);
+        let new_cells = mesh.add_cells(&[array![0], array![2, 2]], CellType::POI1);
         assert_eq!(new_cells.is_err(), true);
     }
 
@@ -436,7 +488,7 @@ mod tests {
         );
     }
 
-    fn add_two_seg2_cells(mesh: &mut Mesh) -> Result<Vec<usize>, &str> {
+    fn add_two_seg2_cells<'a>(mesh: &'a mut Mesh) -> Result<Vec<usize>, &'a str> {
         let new_cells = mesh.add_cells(&[array![0, 1], array![2, 3]], CellType::SEG2);
         new_cells
     }
@@ -469,23 +521,31 @@ mod tests {
         }
     }
     #[test]
-    fn create_node_group_should_work(){
+    fn create_node_group_should_work() {
         let mut mesh = get_mesh_with_six_nodes();
         let _new_cells = add_two_seg2_cells(&mut mesh).unwrap();
-        let group_node_ids = vec![0,2,4];
+        let group_node_ids = vec![0, 2, 4];
         assert_eq!(mesh.create_node_group("GROUP1", &group_node_ids), Ok(()));
-        assert_eq!(mesh.create_node_group("GROUP_NOT_POSSIBLE", &vec![1000]).is_err(), true);
+        assert_eq!(
+            mesh.create_node_group("GROUP_NOT_POSSIBLE", &vec![1000])
+                .is_err(),
+            true
+        );
         let gma = &mesh.gma.clone();
         let actual_node_ids = gma.get("GROUP1").unwrap();
         assert_eq!(actual_node_ids, &group_node_ids.clone());
     }
     #[test]
-    fn create_cell_group_should_work(){
+    fn create_cell_group_should_work() {
         let mut mesh = get_mesh_with_six_nodes();
         let new_cells = add_two_seg2_cells(&mut mesh).unwrap();
         let group_cell_ids = new_cells.clone();
         assert_eq!(mesh.create_cell_group("GROUP1", &group_cell_ids), Ok(()));
-        assert_eq!(mesh.create_cell_group("GROUP_NOT_POSSIBLE", &vec![1000]).is_err(), true);
+        assert_eq!(
+            mesh.create_cell_group("GROUP_NOT_POSSIBLE", &vec![1000])
+                .is_err(),
+            true
+        );
         let gma = &mesh.gma.clone();
         let actual_cell_ids = gma.get("GROUP1").unwrap();
         assert_eq!(actual_cell_ids, &new_cells.clone());
