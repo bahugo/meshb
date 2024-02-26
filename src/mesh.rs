@@ -249,7 +249,7 @@ impl<'a> Mesh {
                 .collect();
             let _ = mesh.add_a_cell(cell.cell_type, &connectivities);
         }
-        for group in parser_output.groups {
+        for _group in parser_output.groups {
             todo!()
         }
         mesh
