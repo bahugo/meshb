@@ -1,24 +1,22 @@
-use ndarray::Array1;
-
 use crate::lib::CellType;
 
 
 #[derive(Debug, Clone)]
 pub struct MeshCell {
     pub ty: CellType,
-    pub co: Array1<usize>,
+    pub co: Vec<usize>,
 
 }
 
 impl MeshCell {
-    pub fn get_co(&self) -> Array1<usize> {
+    pub fn get_co(&self) -> Vec<usize> {
         self.co.clone()
     }
 
-    pub fn new(cell_type: CellType, connectivity: &Array1<usize>) -> Result<MeshCell, &'static str>{
+    pub fn new(cell_type: CellType, connectivity: &Vec<usize>) -> Result<MeshCell, &'static str>{
 
         if connectivity.len() != cell_type.get_nb_of_connectivities() {
-            return Err("Poi1Cell connectivity must be of length 1");
+            return Err("connectivity not implemented for this cell_type");
         }
         Ok(MeshCell {
             ty: cell_type,

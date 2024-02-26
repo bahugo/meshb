@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 derive-new = "0.5.9"
 derive_more = "0.99.17"
-ndarray = "0.15.6"
 num-traits = "0.2.15"
 regex = "1.6.0"
 insta = "1.31.0"
