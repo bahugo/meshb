@@ -51,6 +51,8 @@ pub struct Mesh {
     pub gno: HashMap<&'static str, Vec<usize>>,
     // gma [Group]: groupes de mailles (dictionnaire de arrays de numéros de mailles)
     pub gma: HashMap<&'static str, Vec<usize>>,
+    // mapping from node names to node ids
+    pub nodes_name_to_id: HashMap<Box<str>, usize>,
 }
 
 impl<'a> Mesh {
@@ -62,11 +64,8 @@ impl<'a> Mesh {
             cells: HashMap::new(),
             gno: HashMap::new(),
             gma: HashMap::new(),
+            nodes_name_to_id: HashMap::new(),
         }
-    }
-
-    pub fn get_node_names_to_node_ids(&self) -> HashMap<Box<str>, usize> {
-        self.nodes.clone().into_iter().map(|(id, x)| (x.name, id)).collect()
     }
 
     pub fn add_nodes(&mut self, nodes: Vec<NodeProp<'a>>) {
@@ -76,10 +75,11 @@ impl<'a> Mesh {
                 x: node_prop.x.into(),
                 y: node_prop.y.into(),
                 z: node_prop.z.into(),
-                name: node_prop.name.into(),
             };
             self.nodes.insert(self.next_node_id, node_tmp);
-            // incrément du prochain node_id
+            if let Some(node_name) = node_prop.name {
+                self.nodes_name_to_id.insert(node_name.into(), self.next_node_id);
+            }            // incrément du prochain node_id
             self.next_node_id += 1;
         }
     }
@@ -121,7 +121,7 @@ impl<'a> Mesh {
         format!("M{}", &(cell_id + 1))
     }
 
-    pub fn get_cell_co(&self, cell_id: usize) -> Result<Vec<Box<str>>, MeshError> {
+    pub fn get_cell_co(&self, cell_id: usize) -> Result<Vec<usize>, MeshError> {
         let node_ids = match self.cells.get(&cell_id) {
             Some(val) => val.get_co(),
             None => {
@@ -129,12 +129,8 @@ impl<'a> Mesh {
                 return Err(MeshError { message: mess });
             }
         };
-        let out = node_ids
-            .iter()
-            .map(|node_id| self.nodes[node_id].name.clone())
-            .collect();
 
-        Ok(out)
+        Ok(node_ids)
     }
 
     pub fn create_one_cell(
@@ -237,13 +233,11 @@ impl<'a> Mesh {
 
         mesh.add_nodes(parser_output.nodes.to_owned());
 
-        let nodes_mapping = mesh.get_node_names_to_node_ids();
-
         for cell in parser_output.cells {
             let connectivities: Vec<usize> = cell.nodes.into_iter()
                 .map(|x| {
                     let node_name = String::from(x).into_boxed_str();
-                    let node_id = nodes_mapping.get(&node_name).unwrap().clone();
+                    let node_id = mesh.nodes_name_to_id.get(&node_name).unwrap().clone();
                     node_id
                 })
                 .collect();
@@ -258,7 +252,8 @@ impl<'a> Mesh {
     pub fn read_mesh(filename: &str, format: MeshFormat) -> Self {
         println!("Reading file {}", filename);
 
-        let content = fs::read_to_string(filename).expect("Something went wrong reading the file");
+        let content = fs::read_to_string(filename)
+            .expect("Something went wrong reading the file");
 
         let parser_output = match format {
             MeshFormat::Mail => Mesh::read_mail_format(&content),
@@ -306,13 +301,13 @@ mod tests {
                 x: 3.,
                 y: 0.,
                 z: 1.,
-                name: "N12",
+                name: Some("N12"),
             },
             NodeProp {
                 x: 2.,
                 y: 1.,
                 z: 1.,
-                name: "N2",
+                name: Some("N2"),
             },
         ];
         mesh.add_nodes(nodes);
@@ -324,7 +319,6 @@ mod tests {
                 x: 3.0,
                 y: 0.0,
                 z: 1.0,
-                name: "N12".into()
             }
         );
         assert_eq!(
@@ -333,7 +327,6 @@ mod tests {
                 x: 2.0,
                 y: 1.0,
                 z: 1.0,
-                name: "N2".into()
             }
         );
         assert_eq!(mesh.gno.len(), 0);
@@ -343,13 +336,13 @@ mod tests {
                 x: 3.2,
                 y: 0.3,
                 z: 1.3,
-                name: "N21",
+                name: Some("N21"),
             },
             NodeProp {
                 x: 2.1,
                 y: 1.1,
                 z: 1.1,
-                name: "N222",
+                name: Some("N222"),
             },
         ];
         mesh.add_nodes(nodes);
@@ -360,7 +353,6 @@ mod tests {
                 x: 3.2,
                 y: 0.3,
                 z: 1.3,
-                name: "N21".into()
             }
         );
         assert_eq!(
@@ -369,7 +361,6 @@ mod tests {
                 x: 2.1,
                 y: 1.1,
                 z: 1.1,
-                name: "N222".into()
             }
         );
     }
@@ -381,37 +372,37 @@ mod tests {
                 x: 3.,
                 y: 0.,
                 z: 1.,
-                name: "N1",
+                name: Some("N1"),
             },
             NodeProp {
                 x: 2.,
                 y: 1.,
                 z: 1.,
-                name: "N2",
+                name: Some("N2"),
             },
             NodeProp {
                 x: 3.2,
                 y: 0.3,
                 z: 1.3,
-                name: "N3",
+                name: Some("N3"),
             },
             NodeProp {
                 x: 2.1,
                 y: 1.1,
                 z: 1.1,
-                name: "N4",
+                name: Some("N4"),
             },
             NodeProp {
                 x: 4.2,
                 y: 0.3,
                 z: 1.3,
-                name: "N5",
+                name: Some("N5"),
             },
             NodeProp {
                 x: 3.1,
                 y: 1.1,
                 z: 1.1,
-                name: "N6",
+                name: Some("N6"),
             },
         ];
         mesh.add_nodes(nodes);
@@ -439,10 +430,10 @@ mod tests {
 
         let cell_co_1 = mesh.get_cell_co(0).unwrap();
         assert_eq!(cell_co_1.len(), 1);
-        assert_eq!( cell_co_1[0], String::from("N1").into_boxed_str());
+        assert_eq!( cell_co_1[0], 0);
         let cell_co_2 = mesh.get_cell_co(1).unwrap();
         assert_eq!(cell_co_2.len(), 1);
-        assert_eq!(cell_co_2[0],String::from("N3").into_boxed_str());
+        assert_eq!(cell_co_2[0], 2);
     }
 
     #[test]
@@ -453,12 +444,12 @@ mod tests {
         assert_eq!(new_cells.unwrap(), vec![0, 1]);
         assert_eq!(mesh.cells.len(), 2);
         let cell_co_1 = mesh.get_cell_co(0).unwrap();
-        assert_eq!( cell_co_1[0], String::from("N1").into_boxed_str());
-        assert_eq!( cell_co_1[1], String::from("N2").into_boxed_str());
+        assert_eq!( cell_co_1[0], 0);
+        assert_eq!( cell_co_1[1], 1);
         let cell_co_2 = mesh.get_cell_co(1).unwrap();
         let _cell_co_3 = mesh.get_cell_co(1).unwrap();
-        assert_eq!( cell_co_2[0], String::from("N3").into_boxed_str());
-        assert_eq!( cell_co_2[1], String::from("N4").into_boxed_str());
+        assert_eq!( cell_co_2[0], 2);
+        assert_eq!( cell_co_2[1], 3);
     }
 
     fn add_two_seg2_cells<'a>(mesh: &'a mut Mesh) -> Result<Vec<usize>, &'a str> {

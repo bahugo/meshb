@@ -6,7 +6,9 @@ Ok(
     MailParseOutput {
         nodes: [
             NodeProp {
-                name: "N1",
+                name: Some(
+                    "N1",
+                ),
                 x: 2.0,
                 y: 3.0,
                 z: 4.0,

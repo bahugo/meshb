@@ -6,7 +6,9 @@ Ok(
     (
         "",
         NodeProp {
-            name: "N12",
+            name: Some(
+                "N12",
+            ),
             x: 1.2,
             y: 23.3,
             z: 233.0,

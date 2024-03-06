@@ -32,7 +32,7 @@ impl MailParseOutput<'_> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeProp<'a> {
-    pub name: &'a str,
+    pub name: Option<&'a str>,
     pub x: f32,
     pub y: f32,
     pub z: f32,

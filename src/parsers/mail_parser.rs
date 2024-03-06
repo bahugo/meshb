@@ -49,7 +49,7 @@ fn node_description(input: &str) -> IResult<&str, NodeProp, ErrorTree<&str>> {
         node_3d_coords,
         multispace0,
     ))(input)?;
-    Ok((input, NodeProp{name, x, y, z }))
+    Ok((input, NodeProp{name: Some(name), x, y, z }))
 }
 
 fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp, ErrorTree<&str>> {
