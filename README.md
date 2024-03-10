@@ -62,5 +62,5 @@ Meshb is an experimental personnal project. It's not ready for production yet.
 
 Code_aster is a FEA software. Here is the .mail format documentation :
 
-- [In french](https://code-aster.org/V2/doc/default/en/man_u/u3/u3.01.00.pdf)
-- [In english](https://code-aster.org/V2/doc/default/en/man_u/u3/u3.01.00.pdf)
+- [In french](https://code-aster.org/doc/default/en/man_u/u3/u3.01.00.pdf)
+- [In english](https://code-aster.org/doc/default/en/man_u/u3/u3.01.00.pdf)
