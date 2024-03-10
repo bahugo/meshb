@@ -51,7 +51,7 @@ Meshb is an experimental personnal project. It's not ready for production yet.
 - [x] Edit existing cells
 - [x] Create group of nodes
 - [x] Create group of cells
-- [ ] Instanciate mesh from parser
+- [x] Instanciate mesh from parser
 
 **Misc :**
 - [ ] Create python bindings

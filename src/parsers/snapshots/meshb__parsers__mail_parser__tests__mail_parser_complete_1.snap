@@ -33,21 +33,27 @@ Ok(
         cells: [
             CellProp {
                 cell_type: POI1,
-                name: "M1",
+                name: Some(
+                    "M1",
+                ),
                 nodes: [
                     "N1",
                 ],
             },
             CellProp {
                 cell_type: POI1,
-                name: "M2",
+                name: Some(
+                    "M2",
+                ),
                 nodes: [
                     "N2",
                 ],
             },
             CellProp {
                 cell_type: SEG2,
-                name: "M3",
+                name: Some(
+                    "M3",
+                ),
                 nodes: [
                     "N1",
                     "N2",
@@ -55,7 +61,9 @@ Ok(
             },
             CellProp {
                 cell_type: SEG2,
-                name: "M4",
+                name: Some(
+                    "M4",
+                ),
                 nodes: [
                     "N1",
                     "N3",

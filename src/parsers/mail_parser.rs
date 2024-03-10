@@ -59,7 +59,7 @@ fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp,
         many_m_n(nb_nodes, nb_nodes, preceded(multispace1, node_or_cell_name)),
         multispace0,
     ))(input)?;
-    Ok((input, CellProp{cell_type, name, nodes: node_names}))
+    Ok((input, CellProp{cell_type, name: Some(name), nodes: node_names}))
 }
 
 fn group_description(group_type: GroupType, input: &str) -> IResult<&str, Group, ErrorTree<&str>> {

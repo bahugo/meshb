@@ -7,7 +7,7 @@ use crate::cell::MeshCell;
 use crate::lib::mail_parser::mail_parser;
 use crate::mesh_enums::{CellType, MeshFormat};
 use crate::node::Node;
-use crate::parsers::tokens::{MailParseOutput, NodeProp};
+use crate::parsers::tokens::{MailParseOutput, NodeProp, CellProp};
 
 // cn [ndarray]: coordonnées des noeuds    (nb_nodes x dim)
 // co [dict]: connectivités des mailles
@@ -52,7 +52,9 @@ pub struct Mesh {
     // gma [Group]: groupes de mailles (dictionnaire de arrays de numéros de mailles)
     pub gma: HashMap<&'static str, Vec<usize>>,
     // mapping from node names to node ids
-    pub nodes_name_to_id: HashMap<Box<str>, usize>,
+    nodes_name_to_id: HashMap<Box<str>, usize>,
+    // mapping from cell names to node ids
+    cells_name_to_id: HashMap<Box<str>, usize>,
 }
 
 impl<'a> Mesh {
@@ -65,6 +67,7 @@ impl<'a> Mesh {
             gno: HashMap::new(),
             gma: HashMap::new(),
             nodes_name_to_id: HashMap::new(),
+            cells_name_to_id: HashMap::new(),
         }
     }
 
@@ -106,6 +109,28 @@ impl<'a> Mesh {
             true
         } else {
             false
+        }
+    }
+
+    pub fn add_cells_from_properties(&mut self, cells: Vec<CellProp<'a>>) {
+        for icell in 0..cells.len() {
+            let cell_prop = &cells[icell];
+            let connectivities: Vec<usize> = cell_prop.nodes.iter()
+                .map(|x| {
+                    let node_name = String::from(*x).into_boxed_str();
+                    let node_id = self.nodes_name_to_id.get(&node_name).unwrap().clone();
+                    node_id
+                })
+                .collect();
+            let cell_tmp = MeshCell {
+                ty: cell_prop.cell_type.clone(),
+                co: connectivities
+            };
+            self.cells.insert(self.next_cell_id, cell_tmp);
+            if let Some(name) = cell_prop.name {
+                self.cells_name_to_id.insert(name.into(), self.next_cell_id);
+            }            // incrément du prochain node_id
+            self.next_cell_id += 1;
         }
     }
 
@@ -232,17 +257,8 @@ impl<'a> Mesh {
         let mut mesh = Mesh::new();
 
         mesh.add_nodes(parser_output.nodes.to_owned());
+        mesh.add_cells_from_properties(parser_output.cells.to_owned());
 
-        for cell in parser_output.cells {
-            let connectivities: Vec<usize> = cell.nodes.into_iter()
-                .map(|x| {
-                    let node_name = String::from(x).into_boxed_str();
-                    let node_id = mesh.nodes_name_to_id.get(&node_name).unwrap().clone();
-                    node_id
-                })
-                .collect();
-            let _ = mesh.add_a_cell(cell.cell_type, &connectivities);
-        }
         for _group in parser_output.groups {
             todo!()
         }

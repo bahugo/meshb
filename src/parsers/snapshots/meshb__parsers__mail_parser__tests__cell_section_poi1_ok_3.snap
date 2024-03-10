@@ -9,14 +9,18 @@ Ok(
             [
                 CellProp {
                     cell_type: POI1,
-                    name: "M1",
+                    name: Some(
+                        "M1",
+                    ),
                     nodes: [
                         "N2",
                     ],
                 },
                 CellProp {
                     cell_type: POI1,
-                    name: "M2",
+                    name: Some(
+                        "M2",
+                    ),
                     nodes: [
                         "N3",
                     ],

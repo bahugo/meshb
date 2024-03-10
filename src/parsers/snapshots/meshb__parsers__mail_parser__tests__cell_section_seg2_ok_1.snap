@@ -9,7 +9,9 @@ Ok(
             [
                 CellProp {
                     cell_type: SEG2,
-                    name: "M1",
+                    name: Some(
+                        "M1",
+                    ),
                     nodes: [
                         "N1",
                         "N2",

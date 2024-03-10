@@ -41,7 +41,7 @@ pub struct NodeProp<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CellProp<'a> {
     pub cell_type: CellType,
-    pub name: &'a str,
+    pub name: Option<&'a str>,
     pub nodes: Vec<&'a str>,
 }
 
