@@ -1,0 +1,12 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "title_section(\"TITRE  \\n\\ntitleafsd DD 23\\nFINSF\")"
+---
+Ok(
+    (
+        "",
+        Title(
+            "titleafsd DD 23",
+        ),
+    ),
+)

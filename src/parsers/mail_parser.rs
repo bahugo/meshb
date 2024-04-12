@@ -2,7 +2,7 @@ use nom::{
     branch::alt,
     bytes::complete::is_not,
     character::complete::{
-        alpha1, alphanumeric1, digit1, line_ending, multispace0, multispace1, space0, space1,
+        alpha1, alphanumeric1, digit1, line_ending, multispace0, multispace1, space0, space1
     },
     combinator::{opt, recognize},
     multi::{many0, many1, many_m_n, separated_list0},
@@ -49,7 +49,15 @@ fn node_description(input: &str) -> IResult<&str, NodeProp, ErrorTree<&str>> {
         node_3d_coords,
         multispace0,
     ))(input)?;
-    Ok((input, NodeProp{name: Some(name), x, y, z }))
+    Ok((
+        input,
+        NodeProp {
+            name: Some(name),
+            x,
+            y,
+            z,
+        },
+    ))
 }
 
 fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp, ErrorTree<&str>> {
@@ -59,7 +67,14 @@ fn cell_description(cell_type: CellType, input: &str) -> IResult<&str, CellProp,
         many_m_n(nb_nodes, nb_nodes, preceded(multispace1, node_or_cell_name)),
         multispace0,
     ))(input)?;
-    Ok((input, CellProp{cell_type, name: Some(name), nodes: node_names}))
+    Ok((
+        input,
+        CellProp {
+            cell_type,
+            name: Some(name),
+            nodes: node_names,
+        },
+    ))
 }
 
 fn group_description(group_type: GroupType, input: &str) -> IResult<&str, Group, ErrorTree<&str>> {
@@ -78,12 +93,35 @@ fn group_description(group_type: GroupType, input: &str) -> IResult<&str, Group,
     ))(input)?;
     Ok((
         input,
-        Group{group_type, name: grp_name, elems: elems_names},
+        Group {
+            group_type,
+            name: grp_name,
+            elems: elems_names,
+        },
     ))
 }
 
 fn end_section_tag(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
     tag("FINSF")(input)
+}
+
+fn start_title_section(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
+    tag("TITRE")(input)
+}
+
+fn title_section(input: &str) -> IResult<&str, MailValue, ErrorTree<&str>> {
+    let (input, (_, _, _, _, title, _, _, _)) = tuple((
+        space0,
+        start_title_section,
+        multispace0,
+        many0(comment_or_line_ending),
+        is_not("\n").context("not end of line"),
+        many0(comment_or_line_ending),
+        multispace0,
+        end_section_tag,
+    ))(input)?;
+
+    Ok((input, MailValue::Title(title)))
 }
 
 fn start_3d_node_section(input: &str) -> IResult<&str, &str, ErrorTree<&str>> {
@@ -184,7 +222,7 @@ fn comment_or_line_ending(input: &str) -> IResult<&str, (), ErrorTree<&str>> {
     let (input, _) = tuple((
         opt(preceded(
             tag("%").context("commentary symbol"),
-            is_not("\n").context("not end of line"),
+            opt(is_not("\n").context("not end of line")),
         )),
         line_ending,
     ))(input)?;
@@ -201,34 +239,40 @@ fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, Error
         many0(useless_line),
         separated_list0(
             many1(useless_line),
-            alt((node_3d_section, cell_section, group_section)),
+            tuple((
+                multispace0,
+                alt((title_section, node_3d_section, cell_section, group_section)),
+            )),
         ),
-        many0(useless_line),
+        tuple((many0(useless_line), multispace0, tag("FIN"), multispace0, many0(useless_line))),
     )(input)?;
 
-    let output =
-        parsed.iter().fold(
-            MailParseOutput::new(),
-            |mut acc: MailParseOutput, item| match item {
-                MailValue::NodeElts(nodes) => {
-                    acc.nodes.extend(nodes.to_owned());
-                    acc
-                }
-                MailValue::Cells(cells) => {
-                    acc.cells.extend(cells.to_owned());
-                    acc
-                }
-                MailValue::Group(group) => {
-                    acc.groups.insert(acc.groups.len(), group.to_owned());
-                    acc
-                }
-            },
-        );
+    let output = parsed.iter().fold(
+        MailParseOutput::new(),
+        |mut acc: MailParseOutput, (_, item)| match item {
+            MailValue::NodeElts(nodes) => {
+                acc.nodes.extend(nodes.to_owned());
+                acc
+            }
+            MailValue::Cells(cells) => {
+                acc.cells.extend(cells.to_owned());
+                acc
+            }
+            MailValue::Group(group) => {
+                acc.groups.insert(acc.groups.len(), group.to_owned());
+                acc
+            }
+            MailValue::Title(_) => {
+                // Title is ignored
+                acc
+            }
+        },
+    );
     Ok((input, output))
 }
 
-pub fn mail_parser<'a>(input: &'a str) ->  Result<MailParseOutput<'a>, ErrorTree<&'a str>>  {
-   final_parser(mail_intermediate_parser)(input)
+pub fn mail_parser<'a>(input: &'a str) -> Result<MailParseOutput<'a>, ErrorTree<&'a str>> {
+    final_parser(mail_intermediate_parser)(input)
 }
 
 #[cfg(test)]
@@ -278,14 +322,35 @@ mod tests {
     }
 
     #[test]
+    fn start_title_section_parser_should_work() {
+        assert_debug_snapshot!("start_title_section_ok", start_title_section("TITRE"));
+        assert_debug_snapshot!("start_title_section_nook", start_title_section("TTITRE"));
+    }
+
+    #[test]
+    fn title_section_parser_should_work() {
+        assert_debug_snapshot!(
+            "title_section_1",
+            title_section("TITRE  \n\ntitleafsd DD 23\nFINSF")
+        );
+    }
+
+    #[test]
     fn start_node_section_parser_should_work() {
         assert_debug_snapshot!("start_section_ok", start_3d_node_section("COOR_3D"));
         assert_debug_snapshot!("start_section_nook", start_3d_node_section("COORD3D"));
     }
+
     #[test]
     fn node_3d_section_parser_should_work() {
-        assert_debug_snapshot!("node_section_1", node_3d_section("COOR_3D  \n\nN1 2  3.0 4\nFINSF"));
-        assert_debug_snapshot!("node_section_2", node_3d_section("COOR_3D\nN1 2  3.0 4\nN2 3  4 4\nFINSF"));
+        assert_debug_snapshot!(
+            "node_section_1",
+            node_3d_section("COOR_3D  \n\nN1 2  3.0 4\nFINSF")
+        );
+        assert_debug_snapshot!(
+            "node_section_2",
+            node_3d_section("COOR_3D\nN1 2  3.0 4\nN2 3  4 4\nFINSF")
+        );
     }
 
     #[test]
@@ -315,10 +380,22 @@ mod tests {
 
     #[test]
     fn cell_section_parser_should_work() {
-        assert_debug_snapshot!("cell_section_poi1_ok_1", cell_section("POI1  \n\nM1 N2   \nFINSF"));
-        assert_debug_snapshot!("cell_section_poi1_ok_2", cell_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF"));
-        assert_debug_snapshot!("cell_section_poi1_ok_3", cell_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF"));
-        assert_debug_snapshot!("cell_section_seg2_ok_1", cell_section("SEG2\nM1 N1 N2\nFINSF"));
+        assert_debug_snapshot!(
+            "cell_section_poi1_ok_1",
+            cell_section("POI1  \n\nM1 N2   \nFINSF")
+        );
+        assert_debug_snapshot!(
+            "cell_section_poi1_ok_2",
+            cell_section("POI1  \n\nM1 N2   \nM2 N3\nFINSF")
+        );
+        assert_debug_snapshot!(
+            "cell_section_poi1_ok_3",
+            cell_section("POI1  \n\nM1 \n N2   \nM2 N3\nFINSF")
+        );
+        assert_debug_snapshot!(
+            "cell_section_seg2_ok_1",
+            cell_section("SEG2\nM1 N1 N2\nFINSF")
+        );
     }
     #[test]
     fn group_name_should_work() {
@@ -342,19 +419,50 @@ mod tests {
     }
     #[test]
     fn group_section_parser_should_work() {
-        assert_debug_snapshot!("group_section_ok_1", group_section("GROUP_NO nom = BORD_INT \n bI1 Bi2\n FINSF"));
-        assert_debug_snapshot!("group_section_ok_2", group_section("GROUP_NO BORD_INT \n bI1 Bi2\n FINSF"));
-        assert_debug_snapshot!("group_section_ok_3", group_section("GROUP_MA nom = BORD_INT \n bI1 Bi2\n FINSF"));
-        assert_debug_snapshot!("group_section_ok_4", group_section("GROUP_MA BORD_INT \n bI1 Bi2\n FINSF"));
-        assert_debug_snapshot!("group_section_ok_5", group_section("GROUP_MA BORD_INT \nbI1 Bi2 \n FINSF"));
-        assert_debug_snapshot!("group_section_ok_6", group_section("GROUP_MA \nBORD_INT\nbI1 Bi2 \n FINSF"));
+        assert_debug_snapshot!(
+            "group_section_ok_1",
+            group_section("GROUP_NO nom = BORD_INT \n bI1 Bi2\n FINSF")
+        );
+        assert_debug_snapshot!(
+            "group_section_ok_2",
+            group_section("GROUP_NO BORD_INT \n bI1 Bi2\n FINSF")
+        );
+        assert_debug_snapshot!(
+            "group_section_ok_3",
+            group_section("GROUP_MA nom = BORD_INT \n bI1 Bi2\n FINSF")
+        );
+        assert_debug_snapshot!(
+            "group_section_ok_4",
+            group_section("GROUP_MA BORD_INT \n bI1 Bi2\n FINSF")
+        );
+        assert_debug_snapshot!(
+            "group_section_ok_5",
+            group_section("GROUP_MA BORD_INT \nbI1 Bi2 \n FINSF")
+        );
+        assert_debug_snapshot!(
+            "group_section_ok_6",
+            group_section("GROUP_MA \nBORD_INT\nbI1 Bi2 \n FINSF")
+        );
     }
 
     #[test]
     fn comment_or_lineending_should_work() {
-        assert_debug_snapshot!("comment_or_lineending_ok_1", comment_or_line_ending("%ble\n"));
-        assert_debug_snapshot!("comment_or_lineending_ok_2", comment_or_line_ending("% ble &\n"));
-        assert_debug_snapshot!("comment_or_lineending_nook_1", comment_or_line_ending("ddf % ble &\n"));
+        assert_debug_snapshot!(
+            "comment_or_lineending_ok_1",
+            comment_or_line_ending("%ble\n")
+        );
+        assert_debug_snapshot!(
+            "comment_or_lineending_ok_2",
+            comment_or_line_ending("% ble &\n")
+        );
+        assert_debug_snapshot!(
+            "comment_or_lineending_ok_3",
+            comment_or_line_ending("%\n")
+        );
+        assert_debug_snapshot!(
+            "comment_or_lineending_nook_1",
+            comment_or_line_ending("ddf % ble &\n")
+        );
     }
 
     #[test]
@@ -368,26 +476,131 @@ mod tests {
 
     #[test]
     fn mail_final_parser_should_work() {
-        assert_debug_snapshot!("mail_parser_1", mail_parser(
-            "COOR_3D  \n\nN1 2  3.0 4\nFINSF\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"
-        ));
-        assert_debug_snapshot!("mail_parser_2", mail_parser("COOR_3D  \n\nN1 2  3.0 4\nFINSF\nPOI1\nM1 N1\nFINSF\n\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF"));
-        assert_debug_snapshot!("mail_parser_with_comments", mail_parser(
-            "COOR_3D %comment \nN1 2  3.0 4\n    % another comment\nFINSF"
-        ));
+        assert_debug_snapshot!(
+            "mail_parser_1",
+            mail_parser(
+                r#" COOR_3D
+
+N1 2  3.0 4
+FINSF
+ COOR_3D
+N2 2  3.0 4
+N3 3  4 4
+FINSF
+FIN"#
+            )
+        );
+        assert_debug_snapshot!("mail_parser_2", mail_parser("COOR_3D  \n\nN1 2  3.0 4\nFINSF\nPOI1\nM1 N1\nFINSF\n\nCOOR_3D  \nN2 2  3.0 4\nN3 3  4 4\nFINSF\nFIN"));
+        assert_debug_snapshot!(
+            "mail_parser_with_comments",
+            mail_parser(
+                r#"COOR_3D %comment
+N1 2  3.0 4
+      % another comment
+FINSF
+        FIN"#
+            )
+        );
         // with useless lines outside definition
-        assert_debug_snapshot!("mail_parser_uselesslines_1", mail_parser(
-            "COOR_3D\nN1 2 3.0 4\nFINSF\nCOOR_3D\nN2 2 3.0 4\nN3 3 4 4\nFINSF\nGROUP_NO GRP1 N1 N2\nFINSF \n"
-        ));
-        assert_debug_snapshot!("mail_parser_uselesslines_2", mail_parser(
-            "\nCOOR_3D\nN1 2 3.0 4\nFINSF\nCOOR_3D\nN2 2 3.0 4\nN3 3 4 4\nFINSF"
-        ));
+        assert_debug_snapshot!(
+            "mail_parser_uselesslines_1",
+            mail_parser(
+                r#"COOR_3D
+N1 2 3.0 4
+FINSF
+COOR_3D
+N2 2 3.0 4
+N3 3 4 4
+FINSF
+GROUP_NO GRP1 N1 N2
+FINSF
+FIN"#
+            )
+        );
+        assert_debug_snapshot!(
+            "mail_parser_uselesslines_2",
+            mail_parser("\nCOOR_3D\nN1 2 3.0 4\nFINSF\nCOOR_3D\nN2 2 3.0 4\nN3 3 4 4\nFINSF\nFIN")
+        );
         assert_debug_snapshot!("mail_parser_uselesslines_3", mail_parser(
-            " \n %comment\nCOOR_3D\nN1 2 3.0 4\nFINSF\nCOOR_3D\nN2 2 3.0 4\nN3 3 4 4\nFINSF\n %comment\n \n"
+            " \n %comment\nCOOR_3D\nN1 2 3.0 4\nFINSF\nCOOR_3D\nN2 2 3.0 4\nN3 3 4 4\nFINSF\n %comment\n \nFIN"
         ));
         // with nodes, cells, groups of nodes and groups of cells
-        assert_debug_snapshot!("mail_parser_complete_1", mail_parser(
-            "COOR_3D\nN1 2 3.0 4\nN2 2 3.0 4\nN3 3 4 4\nFINSF\nPOI1\nM1 N1\nM2 N2\nFINSF\nSEG2\nM3 N1 N2\nM4 N1 N3\nFINSF\nGROUP_NO GRP1 N1 N2\nFINSF\nGROUP_NO\nGRP2 N1 N3\nFINSF\nGROUP_MA GRP3 M1 M2\nFINSF\nGROUP_MA\nGRP4 M1 M3\nFINSF \n"
-        ));
+        assert_debug_snapshot!(
+            "mail_parser_complete_1",
+            mail_parser(
+                r#"COOR_3D
+N1 2 3.0 4
+N2 2 3.0 4
+N3 3 4 4
+FINSF
+POI1
+M1 N1
+M2 N2
+FINSF
+SEG2
+M3 N1 N2
+M4 N1 N3
+FINSF
+GROUP_NO GRP1 N1 N2
+FINSF
+GROUP_NO
+GRP2 N1 N3
+FINSF
+GROUP_MA GRP3 M1 M2
+FINSF
+GROUP_MA
+GRP4 M1 M3
+FINSF
+FIN
+
+"#
+            )
+        );
+
+        assert_debug_snapshot!(
+            "mail_parser_complete_2",
+            mail_parser(
+                r#"
+%--------------------------------------------------------------------------------
+ TITRE
+MA-02-JUIN-2020 11:22:47
+ FINSF
+ %
+ COOR_3D
+ N1        1.00000000000000E+00  4.00000000000000E+00  2.50000000000000E+00
+ N2        2.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
+ N3        3.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
+ N4        4.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00
+FINSF
+ %
+%
+ POI1
+ M1       N1
+ M2       N3
+ M3       N2
+ M4       N4
+ FINSF
+ %
+ SEG2
+ M5       N2       N1
+ M6       N3       N2
+ M7       N4       N3
+FINSF
+
+  %
+ GROUP_MA
+ APPUI
+ M1       M2       M3       M4
+ FINSF
+  %
+ GROUP_NO
+ NOEU_MO
+ N1       N2       N3       N4
+  FINSF
+  %
+ FIN
+            "#
+            )
+        );
     }
 }

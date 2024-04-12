@@ -1,0 +1,132 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "mail_parser(r#\"\n%--------------------------------------------------------------------------------\n TITRE\nMA-02-JUIN-2020 11:22:47\n FINSF\n %\n COOR_3D\n N1        1.00000000000000E+00  4.00000000000000E+00  2.50000000000000E+00\n N2        2.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00\n N3        3.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00\n N4        4.00000000000000E+00  4.00000000000000E+00  1.50000000000000E+00\nFINSF\n %\n%\n POI1\n M1       N1\n M2       N3\n M3       N2\n M4       N4\n FINSF\n %\n SEG2\n M5       N2       N1\n M6       N3       N2\n M7       N4       N3\nFINSF\n\n  %\n GROUP_MA\n APPUI\n M1       M2       M3       M4\n FINSF\n  %\n GROUP_NO\n NOEU_MO\n N1       N2       N3       N4\n  FINSF\n  %\n FIN\n            \"#)"
+---
+Ok(
+    MailParseOutput {
+        nodes: [
+            NodeProp {
+                name: Some(
+                    "N1",
+                ),
+                x: 1.0,
+                y: 4.0,
+                z: 2.5,
+            },
+            NodeProp {
+                name: Some(
+                    "N2",
+                ),
+                x: 2.0,
+                y: 4.0,
+                z: 1.5,
+            },
+            NodeProp {
+                name: Some(
+                    "N3",
+                ),
+                x: 3.0,
+                y: 4.0,
+                z: 1.5,
+            },
+            NodeProp {
+                name: Some(
+                    "N4",
+                ),
+                x: 4.0,
+                y: 4.0,
+                z: 1.5,
+            },
+        ],
+        cells: [
+            CellProp {
+                cell_type: POI1,
+                name: Some(
+                    "M1",
+                ),
+                nodes: [
+                    "N1",
+                ],
+            },
+            CellProp {
+                cell_type: POI1,
+                name: Some(
+                    "M2",
+                ),
+                nodes: [
+                    "N3",
+                ],
+            },
+            CellProp {
+                cell_type: POI1,
+                name: Some(
+                    "M3",
+                ),
+                nodes: [
+                    "N2",
+                ],
+            },
+            CellProp {
+                cell_type: POI1,
+                name: Some(
+                    "M4",
+                ),
+                nodes: [
+                    "N4",
+                ],
+            },
+            CellProp {
+                cell_type: SEG2,
+                name: Some(
+                    "M5",
+                ),
+                nodes: [
+                    "N2",
+                    "N1",
+                ],
+            },
+            CellProp {
+                cell_type: SEG2,
+                name: Some(
+                    "M6",
+                ),
+                nodes: [
+                    "N3",
+                    "N2",
+                ],
+            },
+            CellProp {
+                cell_type: SEG2,
+                name: Some(
+                    "M7",
+                ),
+                nodes: [
+                    "N4",
+                    "N3",
+                ],
+            },
+        ],
+        groups: [
+            Group {
+                group_type: Cell,
+                name: "APPUI",
+                elems: [
+                    "M1",
+                    "M2",
+                    "M3",
+                    "M4",
+                ],
+            },
+            Group {
+                group_type: Node,
+                name: "NOEU_MO",
+                elems: [
+                    "N1",
+                    "N2",
+                    "N3",
+                    "N4",
+                ],
+            },
+        ],
+    },
+)

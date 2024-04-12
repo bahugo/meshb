@@ -1,0 +1,10 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "start_title_section(\"TITRE\")"
+---
+Ok(
+    (
+        "",
+        "TITRE",
+    ),
+)

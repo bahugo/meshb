@@ -1,7 +1,7 @@
 use core::fmt;
-
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::path::PathBuf;
 
 use crate::cell::MeshCell;
 use crate::lib::mail_parser::mail_parser;
@@ -265,8 +265,8 @@ impl<'a> Mesh {
         mesh
     }
 
-    pub fn read_mesh(filename: &str, format: MeshFormat) -> Self {
-        println!("Reading file {}", filename);
+    pub fn read_mesh(filename: PathBuf, format: MeshFormat) -> Self {
+        println!("Reading file {}", filename.display());
 
         let content = fs::read_to_string(filename)
             .expect("Something went wrong reading the file");
@@ -530,4 +530,5 @@ mod tests {
         let actual_cell_ids = gma.get("GROUP1").unwrap();
         assert_eq!(actual_cell_ids, &new_cells.clone());
     }
+
 }

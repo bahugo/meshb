@@ -1,0 +1,16 @@
+---
+source: src/parsers/mail_parser.rs
+expression: "start_title_section(\"TTITRE\")"
+---
+Err(
+    Error(
+        Base {
+            location: "TTITRE",
+            kind: Expected(
+                Tag(
+                    "TITRE",
+                ),
+            ),
+        },
+    ),
+)

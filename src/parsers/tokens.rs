@@ -11,6 +11,7 @@ pub enum MailValue<'a> {
     NodeElts(Vec<NodeProp<'a>>),
     Cells(Vec<CellProp<'a>>),
     Group(Group<'a>),
+    Title(&'a str),
 }
 
 #[derive(Debug, Clone, PartialEq)]
