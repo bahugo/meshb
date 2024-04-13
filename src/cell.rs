@@ -1,7 +1,7 @@
 use crate::lib::CellType;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct MeshCell {
     pub ty: CellType,
     pub co: Vec<usize>,
