@@ -31,6 +31,12 @@ impl MailParseOutput<'_> {
     }
 }
 
+impl Default for MailParseOutput<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeProp<'a> {
     pub name: Option<&'a str>,

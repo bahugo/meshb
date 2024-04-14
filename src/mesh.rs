@@ -120,8 +120,8 @@ impl<'a> Mesh {
                 .nodes
                 .iter()
                 .map(|x| {
-                    if let Some(node_id) = self.nodes_name_to_id.get((*x).into()) {
-                        return node_id.clone();
+                    if let Some(node_id) = self.nodes_name_to_id.get(*x) {
+                        return *node_id;
                     }
                     panic!("Node {} not found in Node name to id mapping : {:#?}", x, self.nodes_name_to_id);
                 })
@@ -166,8 +166,7 @@ impl<'a> Mesh {
         cell_type: CellType,
         connectivity: &Vec<usize>,
     ) -> Result<MeshCell, &'static str> {
-        let cell = MeshCell::new(cell_type, connectivity);
-        cell
+        MeshCell::new(cell_type, connectivity)
     }
 
     pub fn add_a_cell(
@@ -206,8 +205,7 @@ impl<'a> Mesh {
     }
 
     pub fn edit_cell(&mut self, index: usize, connectivity: &Vec<usize>, ty: CellType) -> bool {
-        let val: Result<MeshCell, &'static str>;
-        val = Self::extract_cell_result(MeshCell::new(ty, connectivity));
+        let val = Self::extract_cell_result(MeshCell::new(ty, connectivity));
         match val {
             Ok(ok_val) => {
                 if self.cells.insert(index, ok_val).is_none() {
@@ -242,7 +240,7 @@ impl<'a> Mesh {
         name: &str,
         cell_ids: &Vec<usize>,
     ) -> Result<(), &'static str> {
-        let unique_cell_ids: HashSet<usize> = cell_ids.clone().into_iter().collect();
+        let unique_cell_ids: HashSet<usize> = cell_ids.iter().copied().collect();
         let existing_cell_ids: HashSet<usize> = self.cells.keys().cloned().collect();
         let intersection = existing_cell_ids
             .intersection(&unique_cell_ids)
@@ -268,14 +266,14 @@ impl<'a> Mesh {
                 crate::parsers::tokens::GroupType::Node => {
                     let node_ids: Vec<usize> = group.elems
                         .iter()
-                        .map(|x| mesh.nodes_name_to_id.get((*x).into()).unwrap().clone())
+                        .map(|x| *mesh.nodes_name_to_id.get(*x).unwrap())
                         .collect();
                     mesh.create_node_group(group.name, &node_ids)?;
                 }
                 crate::parsers::tokens::GroupType::Cell => {
                     let cell_ids = group.elems
                         .iter()
-                        .map(|x| mesh.cells_name_to_id.get((*x).into()).unwrap().clone())
+                        .map(|x| *mesh.cells_name_to_id.get(*x).unwrap())
                         .collect();
                     mesh.create_cell_group(group.name, &cell_ids)?;
                 }
@@ -304,6 +302,12 @@ impl<'a> Mesh {
             Ok(val) => Ok(val),
             Err(err) => Err(err.to_string()),
         }
+    }
+}
+
+impl<'a> Default for Mesh {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -444,7 +448,7 @@ mod tests {
     fn mesh_add_cells_should_return_err_when_connectivity_has_bad_len() {
         let mut mesh = get_mesh_with_six_nodes();
         let new_cells = mesh.add_cells(&[vec![0], vec![2, 2]], CellType::POI1);
-        assert_eq!(new_cells.is_err(), true);
+        assert!(new_cells.is_err());
     }
 
     #[test]
@@ -483,7 +487,7 @@ mod tests {
         assert_eq!(cell_co_2[1], 3);
     }
 
-    fn add_two_seg2_cells<'a>(mesh: &'a mut Mesh) -> Result<Vec<usize>, &'a str> {
+    fn add_two_seg2_cells(mesh: &mut Mesh) -> Result<Vec<usize>, &str> {
         let new_cells = mesh.add_cells(&[vec![0, 1], vec![2, 3]], CellType::SEG2);
         new_cells
     }
@@ -494,7 +498,7 @@ mod tests {
         {
             let _new_cells = add_two_seg2_cells(&mut mesh);
             let result = mesh.edit_node(&0, Some(10.2_f64), Some(0.2_f64), None);
-            assert_eq!(result, true);
+            assert!(result);
             let first_node = &mesh.nodes[&0];
 
             assert_eq!(first_node.x, 10.2_f64);
@@ -521,11 +525,7 @@ mod tests {
         let _new_cells = add_two_seg2_cells(&mut mesh).unwrap();
         let group_node_ids = vec![0, 2, 4];
         assert_eq!(mesh.create_node_group("GROUP1", &group_node_ids), Ok(()));
-        assert_eq!(
-            mesh.create_node_group("GROUP_NOT_POSSIBLE", &vec![1000])
-                .is_err(),
-            true
-        );
+        assert!(mesh.create_node_group("GROUP_NOT_POSSIBLE", &vec![1000]).is_err());
         let gma = &mesh.gma.clone();
         let actual_node_ids = gma.get("GROUP1").unwrap();
         assert_eq!(actual_node_ids, &group_node_ids.clone());
@@ -536,11 +536,7 @@ mod tests {
         let new_cells = add_two_seg2_cells(&mut mesh).unwrap();
         let group_cell_ids = new_cells.clone();
         assert_eq!(mesh.create_cell_group("GROUP1", &group_cell_ids), Ok(()));
-        assert_eq!(
-            mesh.create_cell_group("GROUP_NOT_POSSIBLE", &vec![1000])
-                .is_err(),
-            true
-        );
+        assert!(mesh.create_cell_group("GROUP_NOT_POSSIBLE", &vec![1000]).is_err());
         let gma = &mesh.gma.clone();
         let actual_cell_ids = gma.get("GROUP1").unwrap();
         assert_eq!(actual_cell_ids, &new_cells.clone());

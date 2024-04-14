@@ -180,7 +180,7 @@ fn cell_type_tag(input: &str) -> IResult<&str, CellType, ErrorTree<&str>> {
     ))(input)?;
     let cell_type_resu = CellType::from_string(cell_type_str);
     if let Ok(cell_type) = cell_type_resu {
-        return Ok((input, cell_type));
+        Ok((input, cell_type))
     } else {
         panic!("{} not implemented", cell_type_str);
     }
@@ -271,7 +271,7 @@ fn mail_intermediate_parser(input: &str) -> IResult<&str, MailParseOutput, Error
     Ok((input, output))
 }
 
-pub fn mail_parser<'a>(input: &'a str) -> Result<MailParseOutput<'a>, ErrorTree<&'a str>> {
+pub fn mail_parser(input: &str) -> Result<MailParseOutput<'_>, ErrorTree<&str>> {
     final_parser(mail_intermediate_parser)(input)
 }
 

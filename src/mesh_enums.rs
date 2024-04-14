@@ -38,7 +38,7 @@ pub enum CellType {
 }
 impl CellType {
     pub fn from_string(value: &str) -> Result<Self, &str> {
-        return match value {
+        match value {
             "POI1" => Ok(CellType::POI1),
             "SEG2" => Ok(CellType::SEG2),
             "SEG3" => Ok(CellType::SEG3),
@@ -60,10 +60,10 @@ impl CellType {
             "PYRAM5" => Ok(CellType::PYRAM5),
             "PYRAM13" => Ok(CellType::PYRAM13),
             _ => Err("cell_type not implemented"),
-        };
+        }
     }
     pub fn get_nb_of_connectivities(&self) -> usize {
-        return match &self {
+        match &self {
             CellType::POI1 => 1,
             CellType::SEG2 => 2,
             CellType::SEG3 => 3,
@@ -84,7 +84,7 @@ impl CellType {
             CellType::TETRA10 => 10,
             CellType::PYRAM5 => 5,
             CellType::PYRAM13 => 13,
-        };
+        }
     }
 }
 
